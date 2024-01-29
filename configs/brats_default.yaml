@@ -20,6 +20,19 @@ model:
   backbone: "nvidia2018"
   inr:
     name: weight_modulated_inr
+    args:
+      n_layer: 5
+      hidden_dim: [256, 256, 256, 256]
+      use_bias: true
+      input_dim: 3
+      output_dim: 12
+      ff_sigma: 1024
+      ff_dim: 120
+      modulated_layers: [1]
+      backbone_feature_dimensions: [-1, -1, -1, 7864320]
+      modulated_layers_to_backbone_features_map:
+        1: 4
+      normalize_weights: True
 trainer:
   epochs: 100
   batch_size: 2
