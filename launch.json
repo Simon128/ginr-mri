@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Debug Baseline Training",
+      "type": "python",
+      "console": "integratedTerminal",
+      "request": "launch",
+      "module": "ginr-mri.main",
+      "justMyCode": true,
+      "args": [
+        "train",
+        "/home/simon/tum/ginr-mri/configs/brats_default.yaml",
+        "--ranks",
+        "0"
+      ]
+    }
+  ]
+}

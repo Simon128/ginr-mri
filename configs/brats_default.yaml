@@ -1,0 +1,25 @@
+data:
+  name: brats
+  data_prep:
+    use_lgg: true
+    use_hgg: true
+    use_data: ["T1", "T1CE", "T2", "FLAIR"]
+    data_prep_option: "STACK"
+    input_data: ["T1", "T1CE", "T2", "FLAIR"]
+    output_data: ["T1", "T1CE", "T2", "FLAIR"]
+  source_transforms:
+    - name: centercrop3d
+      args:
+        size: [160, 192, 128]
+  target_transforms:
+    - name: centercrop3d
+      args:
+        size: [160, 192, 128]
+model:
+  name: "base"
+  backbone: "nvidia2018"
+trainer:
+  epochs: 100
+  batch_size: 2
+  amp: false
+  validation_frequency: 1.0
