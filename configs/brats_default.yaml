@@ -18,6 +18,8 @@ data:
 model:
   name: "base"
   backbone: "nvidia2018"
+  inr:
+    name: weight_modulated_inr
 trainer:
   epochs: 100
   batch_size: 2

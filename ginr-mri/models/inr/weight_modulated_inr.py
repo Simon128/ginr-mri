@@ -1,143 +1,67 @@
 import numpy as np
-import einops
+from dataclasses import dataclass
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from omegaconf import OmegaConf
+from omegaconf import OmegaConf, MISSING
+
+@dataclass
+class WeightModulatedINRConfig:
+    n_layer: int = 5
+    hidden_dim: list[int] = MISSING
+    use_bias: bool = True
+    input_dim: int = 3
+    output_dim: int = 3
+    ff_sigma: int = 1024
+    ff_dim: int = 128
+    modulated_layers: list[int] = MISSING
+    backbone_feature_dimensions: list[int] = MISSING
+    normalize_weights: bool = True
+
+    @classmethod
+    def create(cls, config):
+        defaults = OmegaConf.structured(cls())
+        config = OmegaConf.merge(defaults, config)
+        return config
+
+class WeightModulatedINR(nn.Module):
+    def __init__(self, config: WeightModulatedINRConfig) -> None:
+        super().__init__()
+        self.config = config
+
+        self.layers = nn.ModuleList()
+        self.modulated_projection = nn.ModuleList()
+        curr_features = self.config.input_dim
+
+        for idx, c in enumerate(self.config.hidden_dim):
+            if idx in self.config.modulated_layers:
+                self.layers.append(nn.Identity())
+                self.modulated_projection.append(nn.Linear(config.backbone_feature_dimensions[idx], curr_features * c))
+                self.modulated_projection.append(nn.ReLU())
+                self.modulated_projection.append(nn.Linear(curr_features * c, curr_features * c))
+            else:
+                self.layers.append(nn.Linear(in_features=curr_features, out_features=c))
+                self.modulated_projection.append(nn.Identity())
+
+            self.layers.append(nn.ReLU())
+            curr_features = c
+
+        self.layers.append(nn.Linear(in_features=curr_features, out_features=self.config.output_dim))
+
+        # deterministic_transinr
+        log_freqs = torch.linspace(0, np.log(config.ff_sigma), config.ff_dim // self.config.input_dim)
+        self.ff_linear = torch.exp(log_freqs)
+
+    def forward(self, coord: torch.Tensor, features: list[torch.Tensor]):
+        fourier_features = torch.matmul(coord.unsqueeze(-1), self.ff_linear.unsqueeze(0))
+        fourier_features = fourier_features.view(*coord.shape[:-1], -1)
+
+        for idx, (layer, mod) in enumerate(zip(self.layers, self.modulated_projection)):
+            test = 5
 
 
 class HypoNet(nn.Module):
-    r"""
-    The Hyponetwork with a coordinate-based MLP to be modulated.
-    """
-    def __init__(self, config):
-        super().__init__()
-        self.config = config
-        self.use_bias = config.use_bias
-        self.ff_config = config.fourier_mapping
-        self.init_config = config.initialization
-        self.use_ff = self.ff_config.use_ff
-        self.num_layer = config.n_layer
-        self.hidden_dims = config.hidden_dim
-        if len(self.hidden_dims) == 1:
-            self.hidden_dims = OmegaConf.to_object(self.hidden_dims) * (self.num_layer - 1)  # exclude output layer
-        else:
-            assert len(self.hidden_dims) == self.num_layer - 1
-
-        if self.config.activation.type == "siren":
-            assert not self.ff_config.use_ff
-            assert self.init_config.weight_init_type == "siren"
-            assert self.init_config.bias_init_type == "siren"
-
-        if self.use_ff:
-            assert self.ff_config.type is not None
-            self.setup_fourier_mapping(ff_type=self.ff_config.type, trainable=self.ff_config.trainable)
-
-        # after computes the shape of trainable parameters, initialize them
-        self.params_dict = None
-        self.params_shape_dict = self.compute_params_shape()
-        self.activation = create_activation(self.config.activation)
-        self.build_base_params_dict(self.config.initialization)
-        self.output_bias = config.output_bias
-
-        self.normalize_weight = config.normalize_weight
-
-        self.ignore_base_param_dict = {name: False for name in self.params_dict}
-
-    def compute_params_shape(self):
-        """
-        Computes the shape of MLP parameters.
-        The computed shapes are used to build the initial weights by `build_base_params_dict`. 
-        """
-        config, ff_config = self.config, self.ff_config
-        use_bias = self.use_bias
-
-        param_shape_dict = dict()
-
-        if not ff_config.use_ff:
-            fan_in = config.input_dim
-        else:
-            fan_in = ff_config.ff_dim * 2
-
-        fan_in = fan_in + 1 if use_bias else fan_in
-        for i in range(config.n_layer - 1):
-            fan_out = self.hidden_dims[i]
-            param_shape_dict[f"linear_wb{i}"] = (fan_in, fan_out)
-            fan_in = fan_out + 1 if use_bias else fan_out
-
-        param_shape_dict[f"linear_wb{config.n_layer-1}"] = (fan_in, config.output_dim)
-        return param_shape_dict
-
-    def build_base_params_dict(self, init_config):
-        assert self.params_shape_dict
-        params_dict = nn.ParameterDict()
-        for idx, (name, shape) in enumerate(self.params_shape_dict.items()):
-            is_first = idx == 0
-            params = create_params_with_init(
-                shape,
-                init_type=init_config.weight_init_type,
-                include_bias=self.use_bias,
-                bias_init_type=init_config.bias_init_type,
-                is_first=is_first,
-                siren_w0=self.config.activation.siren_w0,  # valid only for siren
-            )
-            params = nn.Parameter(params)
-            params_dict[name] = params
-        self.set_params_dict(params_dict)
-
-    def check_valid_param_keys(self, params_dict):
-        predefined_params_keys = self.params_shape_dict.keys()
-        for param_key in params_dict.keys():
-            if param_key in predefined_params_keys:
-                continue
-            else:
-                raise KeyError
-
-    def set_params_dict(self, params_dict):
-        self.check_valid_param_keys(params_dict)
-        self.params_dict = params_dict
-
-    def setup_fourier_mapping(self, ff_type, trainable=False):
-        """
-        build the linear mapping for converting coordinates into fourier features
-        """
-        ff_sigma, ff_dim = self.ff_config.ff_sigma, self.ff_config.ff_dim
-        if ff_type == "deterministic_transinr":
-            log_freqs = torch.linspace(0, np.log(ff_sigma), ff_dim // self.config.input_dim)
-            self.ff_linear = torch.exp(log_freqs)
-        elif ff_type == "random_gaussian":
-            self.ff_linear = torch.randn(self.config.input_dim, ff_dim) * ff_sigma  # scaler
-        elif ff_type == "deterministic_transinr_nerf":
-            self.ff_linear = 2 ** torch.linspace(0, ff_sigma, self.ff_dim // self.config.input_dim)
-        else:
-            raise NotImplementedError
-
-        self.ff_linear = nn.Parameter(self.ff_linear, requires_grad=trainable)
-
-    def fourier_mapping(self, coord):
-        """
-        Computes the fourier features of each coordinate based on configs.
-
-        Args
-            coord (torch.Tensor) : `coord.shape == (B, -1, input_dim)`
-        Returns
-            fourier_features (torch.Tensor) : `ff_feature.shape == (B, -1, 2*ff_dim)`
-        """
-
-        if self.ff_config.type in ["deterministic_transinr", "deterministic_transinr_nerf"]:
-            fourier_features = torch.matmul(coord.unsqueeze(-1), self.ff_linear.unsqueeze(0))
-            fourier_features = fourier_features.view(*coord.shape[:-1], -1)
-        else:
-            fourier_features = torch.matmul(coord, self.ff_linear)
-
-        if not self.ff_config.type == "deterministic_transinr_nerf":
-            fourier_features = fourier_features * np.pi
-
-        fourier_features = [torch.cos(fourier_features), torch.sin(fourier_features)]
-        fourier_features = torch.cat(fourier_features, dim=-1)
-        return fourier_features
-
     def forward(self, coord, modulation_params_dict=None):
         """Computes the value for each coordination
         Note: `assert outputs.shape[:-1] == coord.shape[:-1]`
