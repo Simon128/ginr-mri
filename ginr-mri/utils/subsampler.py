@@ -53,10 +53,10 @@ class SubSampler:
 
     @staticmethod
     def subsample_coords(coords, subcoord_idx=None):
-        if subcoord_idx is None:
-            return coords
-
         batch_size = coords.shape[0]
+        if subcoord_idx is None:
+            return coords.view((batch_size, -1, coords.shape[-1]))
+
         sub_coords = []
         coords = coords.view(batch_size, -1, coords.shape[-1])
         for idx in range(batch_size):
@@ -66,8 +66,9 @@ class SubSampler:
 
     @staticmethod
     def subsample_xs(xs, subcoord_idx=None):
+        batch_size = xs.shape[0]
         if subcoord_idx is None:
-            return xs
+            return xs.view((batch_size, -1, xs.shape[1]))
 
         batch_size = xs.shape[0]
         permute_idx_range = [i for i in range(2, xs.ndim)]  # note: xs is originally channel-fist data format

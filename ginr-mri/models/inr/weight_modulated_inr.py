@@ -64,6 +64,8 @@ class WeightModulatedINR(nn.Module):
         # deterministic_transinr
         log_freqs = torch.linspace(0, np.log(config.ff_sigma), config.ff_dim // self.config.input_dim)
         self.ff_linear = torch.exp(log_freqs).to("cuda") # todo
+        #self.ff_linear = 2 ** torch.linspace(0, config.ff_sigma, config.ff_dim // self.config.input_dim)
+        #self.ff_linear = torch.randn(self.config.input_dim, config.ff_dim).to("cuda") * config.ff_sigma  # scaler
 
     def compute_loss(self, preds, targets, reduction="mean"):
         assert reduction in ["mean", "sum", "none"]
@@ -82,6 +84,9 @@ class WeightModulatedINR(nn.Module):
     def forward(self, coord: torch.Tensor, features: list[torch.Tensor], target: torch.Tensor | None = None):
         fourier_features = torch.matmul(coord.unsqueeze(-1), self.ff_linear.unsqueeze(0))
         fourier_features = fourier_features.view(*coord.shape[:-1], -1)
+        #fourier_features = torch.matmul(coord, self.ff_linear)
+        #fourier_features = fourier_features * np.pi
+        
         fourier_features = [torch.cos(fourier_features), torch.sin(fourier_features)]
         z = torch.cat(fourier_features, dim=-1)
 

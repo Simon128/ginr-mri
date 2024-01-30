@@ -67,7 +67,7 @@ class Engine:
 
     def fit(self, model, train_dataset, val_dataset, optimizer):
         torch.backends.cudnn.benchmark = True
-        trainloader = self.get_dataloader(train_dataset)
+        trainloader = self.get_dataloader(train_dataset, shuffle=True)
         valloader = self.get_dataloader(val_dataset, shuffle=False)
         self.run_hooks(
             "pre_fit", engine=self, model=model, 
@@ -78,8 +78,6 @@ class Engine:
         train_size = len(trainloader) 
         val_step = math.floor(train_size / self.conf.validation_frequency)
         log_step = train_size // 10
-        train_size = 1
-        log_step = 1
         model.train()
         epoch_timer = Timer()
         if self.conf.amp:
@@ -121,7 +119,7 @@ class Engine:
                 train_timer.step()
                 if it == train_size - 1:
                     logger.info(f"Training {it + 1}/{train_size} in epoch {e + self.resume_epoch} on rank {self.rank} -- elapsed {train_timer.get_elapsed()} -- eta: {train_timer.get_eta(train_size - it)}")
-                    if e % 1000 == 0:
+                    if e % 25 == 0:
                         model.eval()
                         with torch.inference_mode():
                             output = model.full_prediction(batch, verbose=True)
@@ -161,13 +159,14 @@ class Engine:
                 val_timer.step()
                 if it == val_size - 1:
                     logger.info(f"Validating {it + 1}/{val_size} in epoch {epoch} on rank {self.rank} -- elapsed {val_timer.get_elapsed()} -- eta: {val_timer.get_eta(val_size - it)}")
-                    output = model.full_prediction(batch, verbose=True)
-                    test = output.inr_out.prediction
-                    sample_mses = torch.reshape((test[0][0].unsqueeze(0) - batch[0][0][0].unsqueeze(0)) ** 2, (1, -1)).mean(dim=-1)
-                    psnr = (-10 * torch.log10(sample_mses)).mean()
-                    save_tensor_as_nifti(test[0][0], f"val_{epoch}.nii") # first item of batch and channel t1
-                    save_tensor_as_nifti(batch[0][0][0], f"val_ground_truth.nii")
-                    logger.info(f"PSNR: {psnr}")
+                    if epoch % 25 == 0:
+                        output = model.full_prediction(batch, verbose=True)
+                        test = output.inr_out.prediction
+                        sample_mses = torch.reshape((test[0][0].unsqueeze(0) - batch[0][0][0].unsqueeze(0)) ** 2, (1, -1)).mean(dim=-1)
+                        psnr = (-10 * torch.log10(sample_mses)).mean()
+                        save_tensor_as_nifti(test[0][0], f"val_{epoch}.nii") # first item of batch and channel t1
+                        save_tensor_as_nifti(batch[0][0][0], f"val_ground_truth.nii")
+                        logger.info(f"PSNR: {psnr}")
 
         self.run_hooks("post_validation_epoch", engine=self, epoch=epoch)
         model.train()

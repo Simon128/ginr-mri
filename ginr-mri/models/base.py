@@ -88,11 +88,11 @@ class BaseModel(nn.Module):
         device = device if device is not None else x.device
         coord_inputs = self.coord_sampler(x, coord_range, upsample_ratio, device)
         # add noises to the coordinates for avoid overfitting on training coordinates.
-        (B, *shape, input_dim) = coord_inputs.shape
-        unif_noises = torch.rand(B, *shape, input_dim, device=coord_inputs.device)
-        len_coord_range = self.config.coord_sampler.coord_range[1] - self.config.coord_sampler.coord_range[0]
-        coord_noises = (unif_noises - 0.5) * len_coord_range / shape[0]
-        coord_inputs = coord_inputs + coord_noises
+        #(B, *shape, input_dim) = coord_inputs.shape
+        #unif_noises = torch.rand(B, *shape, input_dim, device=coord_inputs.device)
+        #len_coord_range = self.config.coord_sampler.coord_range[1] - self.config.coord_sampler.coord_range[0]
+        #coord_noises = (unif_noises - 0.5) * len_coord_range / shape[0]
+        #coord_inputs = coord_inputs + coord_noises
         return coord_inputs
 
     def forward(self, batch: tuple[torch.Tensor, torch.Tensor], coord: torch.Tensor | None = None):

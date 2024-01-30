@@ -21,6 +21,14 @@ model:
   latent_transform:
     name: convolutional
     levels:
+      - n_layer: 2
+        strides: [2, 1]
+        padding: [1, "same"]
+        channels: [128, 256]
+        kernel_size: [3, 1]
+        backbone_idx: 3
+        input_channels: 128
+        batch_norm: true
       - n_layer: 1
         strides: [1]
         padding: ["same"]
@@ -36,13 +44,14 @@ model:
     use_bias: true
     input_dim: 3
     output_dim: 1
-    ff_sigma: 1024
+    ff_sigma: 120
     ff_dim: 120
     normalize_weights: True
-    modulated_layers: [1]
-    backbone_spatial_feature_dimensions: [7680]
+    modulated_layers: [1, 2]
+    backbone_spatial_feature_dimensions: [7680, 7680]
     modulated_layers_to_backbone_features_map:
       1: 0
+      2: 1
   coord_sampler:
     coord_range: [-1.0, 1.0]
   subsampler:
@@ -60,6 +69,11 @@ hooks:
     cfg:
       directory: /home/simon/tum/mri-runs/debug
       batch_log_freq: 10
+  - hook: lr_scheduler
+    priority: 100
+    cfg:
+      scheduler_name: StepLR
+      step_size: 1000
 engine:
   epochs: 10000
   batch_size: 2
