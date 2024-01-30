@@ -16,7 +16,7 @@ class WeightModulatedINRConfig:
     ff_sigma: int = 1024
     ff_dim: int = 120
     modulated_layers: list[int] = MISSING
-    backbone_feature_dimensions: list[int] = MISSING
+    backbone_spatial_feature_dimensions: list[int] = MISSING
     modulated_layers_to_backbone_features_map: dict = MISSING
     normalize_weights: bool = True
 
@@ -33,28 +33,27 @@ class WeightModulatedINR(nn.Module):
 
         self.layers = nn.ModuleList()
         self.modulated_projection = nn.ModuleList()
-        curr_features = self.config.ff_dim
+        self.mod_biases = nn.ParameterList()
+        curr_features = self.config.ff_dim * 2
+        mod_idx = 0
 
         for idx, c in enumerate(self.config.hidden_dim):
             if idx in self.config.modulated_layers:
                 self.layers.append(nn.Identity())
-                # todo
                 self.modulated_projection.append(nn.Sequential(
-                    nn.Conv3d(256, 128, 1, padding="same"),
-                    nn.ReLU(),
-                    nn.Conv3d(128, 64, 1, padding="same"),
-                    nn.ReLU(),
-                    nn.Conv3d(64, 32, 1, stride=2),
-                    nn.ReLU(),
-                    nn.Flatten(),
-                    nn.Linear(960*32, c * curr_features)
+                    nn.Flatten(start_dim=2),
+                    nn.Linear(config.backbone_spatial_feature_dimensions[mod_idx], c)
                 ))
+                # todo: correct init (xavier) instead of ones
+                self.mod_biases.append(nn.Parameter(torch.ones((1, c))))
+                mod_idx += 1
             else:
                 self.layers.append(nn.Sequential(
                     nn.Linear(in_features=curr_features, out_features=c),
                     nn.ReLU()
                 ))
                 self.modulated_projection.append(nn.Identity())
+                self.mod_biases.append(nn.Identity())
             curr_features = c
 
         self.layers.append(nn.Linear(in_features=curr_features, out_features=self.config.output_dim))
@@ -66,14 +65,24 @@ class WeightModulatedINR(nn.Module):
 
     def forward(self, coord: torch.Tensor, features: list[torch.Tensor], target: torch.Tensor | None = None):
         fourier_features = torch.matmul(coord.unsqueeze(-1), self.ff_linear.unsqueeze(0))
-        z = fourier_features.view(*coord.shape[:-1], -1)
+        fourier_features = fourier_features.view(*coord.shape[:-1], -1)
+        fourier_features = [torch.cos(fourier_features), torch.sin(fourier_features)]
+        z = torch.cat(fourier_features, dim=-1)
 
         for idx, (layer, mod) in enumerate(zip(self.layers, self.modulated_projection)):
             if idx in self.config.modulated_layers:
                 feat_idx = self.config.modulated_layers_to_backbone_features_map[idx]
                 feat = features[feat_idx]
+                if self.config.normalize_weights:
+                    feat = F.normalize(feat, dim=1)
                 proj_feat = mod(feat)
-                z = torch.bmm(z.unsqueeze(1), proj_feat.view(*z.shape, -1)).squeeze(1)
+                proj_feat = proj_feat.view(z.shape[0], *z.shape[2:], -1)
+                if self.config.use_bias:
+                    ones = torch.ones(*z.shape[:-1], 1, device=z.device)
+                    z = torch.cat([z, ones], dim=-1)
+                    proj_feat = torch.cat((proj_feat, self.mod_biases[idx].unsqueeze(0).repeat((z.shape[0], 1, 1))), dim = 1)
+
+                z = torch.bmm(z, proj_feat)
             else:
                 z = layer(z)
 

@@ -22,14 +22,14 @@ model:
     name: weight_modulated_inr
     args:
       n_layer: 5
-      hidden_dim: [256, 256, 256, 256]
+      hidden_dim: [256, 256, 256, 256] # needs to coincide with backbone embedding channels
       use_bias: true
       input_dim: 3
       output_dim: 12
       ff_sigma: 1024
       ff_dim: 120
       modulated_layers: [1]
-      backbone_feature_dimensions: [-1, -1, -1, 7864320]
+      backbone_spatial_feature_dimensions: [7680]
       modulated_layers_to_backbone_features_map:
         1: 4
       normalize_weights: True

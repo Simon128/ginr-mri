@@ -28,5 +28,5 @@ class BaseModel(nn.Module):
     def forward(self, batch: tuple[torch.Tensor, torch.Tensor]):
         x, target = batch
         z = self.backbone(x)
-        self.inr(torch.tensor([0.1, 0.2, 0.3]).unsqueeze(0).repeat(2, 1).to(x.device), z, target)
+        self.inr(torch.tensor([0.1, 0.2, 0.3])[None, None].repeat(2, 178, 1).to(x.device), z, target)
         return None
