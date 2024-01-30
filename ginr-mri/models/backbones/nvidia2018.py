@@ -62,7 +62,7 @@ class Nvidia2018(nn.Module):
     '''
     def __init__(self) -> None:
         super().__init__()
-        self.first_layer = nn.Conv3d(in_channels=4, out_channels=32, kernel_size=3, padding="same")
+        self.first_layer = nn.Conv3d(in_channels=1, out_channels=32, kernel_size=3, padding="same")
         self.block_1 = Nvidia2018EncoderBlock(in_channels=32, downsample=False)
         self.block_2_a = Nvidia2018EncoderBlock(in_channels=32, downsample=True)
         self.block_2_b = Nvidia2018EncoderBlock(in_channels=64, downsample=False)

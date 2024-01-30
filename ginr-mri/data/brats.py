@@ -77,6 +77,7 @@ class BraTS(Dataset):
         self.split = split
         self.data_prep_cfg = data_prep_cfg
         self.use_patterns = self._get_usable_patterns(data_prep_cfg.use_data) 
+        self.use_options = str_list_to_int_flag(data_prep_cfg.use_data, BraTSScanTypes)
         self.input_options = str_list_to_int_flag(data_prep_cfg.input_data, BraTSScanTypes)
         self.output_options = str_list_to_int_flag(data_prep_cfg.output_data, BraTSScanTypes)
         self.items = []
@@ -114,22 +115,23 @@ class BraTS(Dataset):
     def _prepare_item_stack(self, item):
         input_list = []
         output_list = []
+        useable = {}
+
+        for opt in self.use_patterns:
+            if opt == BraTSScanTypes.NA: continue
+            path = item[opt]
+            t = torch.tensor(nib.load(path).get_fdata(), device=self.device, dtype=torch.float32) # type:ignore
+            # normalize 
+            t = (t - torch.min(t)) * 2 / (torch.max(t) - torch.min(t)) - 1
+            useable[opt] = t
 
         for opt in self.input_options:
             if opt == BraTSScanTypes.NA: continue
-            path = item[opt]
-            t = torch.tensor(nib.load(path).get_fdata(), device=self.device, dtype=torch.float32) # type:ignore
-            # normalize 
-            t = (t - torch.min(t)) * 2 / (torch.max(t) - torch.min(t)) - 1
-            input_list.append(t) 
+            input_list.append(useable[opt]) 
 
         for opt in self.output_options:
             if opt == BraTSScanTypes.NA: continue
-            path = item[opt]
-            t = torch.tensor(nib.load(path).get_fdata(), device=self.device, dtype=torch.float32) # type:ignore
-            # normalize 
-            t = (t - torch.min(t)) * 2 / (torch.max(t) - torch.min(t)) - 1
-            output_list.append(t)
+            output_list.append(useable[opt])
 
         input = torch.stack(input_list)
         if self.src_transform:

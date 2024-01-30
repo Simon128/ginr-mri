@@ -12,6 +12,7 @@ class ConvolutionalLTConfigSingle:
     kernel_size: list[int] = MISSING
     backbone_idx: int = MISSING
     input_channels: int = MISSING
+    batch_norm: bool = True
 
     @classmethod
     def create(cls, config):
@@ -40,6 +41,8 @@ class ConvolutionalLT(nn.Module):
             layers = []
             in_channels = level.input_channels
             for idx in range(level.n_layer):
+                if level.batch_norm:
+                    layers.append(nn.BatchNorm3d(in_channels))
                 layers.append(nn.ReLU())
                 layers.append(nn.Conv3d(
                     in_channels, level.channels[idx], level.kernel_size[idx], 

@@ -121,7 +121,7 @@ class Engine:
                 train_timer.step()
                 if it == train_size - 1:
                     logger.info(f"Training {it + 1}/{train_size} in epoch {e + self.resume_epoch} on rank {self.rank} -- elapsed {train_timer.get_elapsed()} -- eta: {train_timer.get_eta(train_size - it)}")
-                    if e % 100 == 0:
+                    if e % 1000 == 0:
                         model.eval()
                         with torch.inference_mode():
                             output = model.full_prediction(batch, verbose=True)
