@@ -5,9 +5,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from omegaconf import OmegaConf, MISSING
+from .inr_output import INROutput
 
 @dataclass
 class WeightModulatedINRConfig:
+    name: str = "weight_modulated_inr"
     n_layer: int = 5
     hidden_dim: list[int] = MISSING
     use_bias: bool = True
@@ -63,6 +65,20 @@ class WeightModulatedINR(nn.Module):
         log_freqs = torch.linspace(0, np.log(config.ff_sigma), config.ff_dim // self.config.input_dim)
         self.ff_linear = torch.exp(log_freqs).to("cuda") # todo
 
+    def compute_loss(self, preds, targets, reduction="mean"):
+        assert reduction in ["mean", "sum", "none"]
+        batch_size = preds.shape[0]
+        sample_mses = torch.reshape((preds - targets) ** 2, (batch_size, -1)).mean(dim=-1)
+
+        if reduction == "mean":
+            total_loss = sample_mses.mean()
+        elif reduction == "sum":
+            total_loss = sample_mses.sum()
+        else:
+            total_loss = sample_mses
+
+        return total_loss
+
     def forward(self, coord: torch.Tensor, features: list[torch.Tensor], target: torch.Tensor | None = None):
         fourier_features = torch.matmul(coord.unsqueeze(-1), self.ff_linear.unsqueeze(0))
         fourier_features = fourier_features.view(*coord.shape[:-1], -1)
@@ -86,10 +102,9 @@ class WeightModulatedINR(nn.Module):
             else:
                 z = layer(z)
 
-        output_dict = {
-            "output": z
-        }
-        if target:
-            output_dict["loss"] = 0
+        output = INROutput(prediction=z)
 
-        return output_dict
+        if target is not None:
+            output.loss = self.compute_loss(z, target)
+
+        return output

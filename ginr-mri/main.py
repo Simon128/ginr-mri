@@ -1,6 +1,9 @@
 from argparse import ArgumentParser
+import logging
 
 from .trainer import Trainer
+
+logging.basicConfig(filename='example.log', encoding='utf-8', level=logging.INFO)
 
 def parser():
     parser = ArgumentParser(

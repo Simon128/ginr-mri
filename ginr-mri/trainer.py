@@ -89,18 +89,20 @@ class Trainer:
             scaler = torch.cuda.amp.grad_scaler.GradScaler()
 
         for e in range(self.epochs):
-            train_loss = 0
+            train_loss = [0.0] * 10
             if dist.is_initialized():
                 trainloader.sampler.set_epoch(e) # type:ignore
                 valloader.sampler.set_epoch(e) # type:ignore
             if e == 0:
-                logger.info(f"Running Epoch {e + self.resume_epoch}/{self.epochs} on rank {self.rank} -- elapsed: {epoch_timer.get_elapsed()} -- eta: {epoch_timer.get_eta(self.epochs - e)}")
+                logger.info(
+                    f"Running Epoch {e + self.resume_epoch}/{self.epochs} on rank {self.rank} -- loss: {sum(train_loss) / len(train_loss)} -- elapsed: {epoch_timer.get_elapsed()} -- eta: {epoch_timer.get_eta(self.epochs - e)}")
             train_iter = iter(trainloader)
             self.run_hooks("pre_training_epoch", engine=self, epoch=e + self.resume_epoch)
             train_timer = Timer()
             for it in range(train_size):
                 if it % log_step == 0:
-                    logger.info(f"Training {it}/{train_size} in epoch {e + self.resume_epoch} on rank {self.rank} -- elapsed {train_timer.get_elapsed()} -- eta: {train_timer.get_eta(train_size - it)}")
+                    logger.info(
+                        f"Training {it}/{train_size} in epoch {e + self.resume_epoch} on rank {self.rank} -- loss: {sum(train_loss) / len(train_loss)} -- elapsed {train_timer.get_elapsed()} -- eta: {train_timer.get_eta(train_size - it)}")
                 self.optimizer.zero_grad()
                 batch = next(train_iter)
                 self.run_hooks("pre_model_step", engine=self, iteration_step=it, epoch=e + self.resume_epoch, batch=batch, stage="train")
@@ -116,7 +118,8 @@ class Trainer:
                     output.loss.backward()
                     self.optimizer.step()
                 
-                train_loss += output.loss.item()
+                train_loss = train_loss[1:]
+                train_loss.append(output.loss.item())
                 self.run_hooks("post_model_step", engine=self, iteration_step=it, epoch=e + self.resume_epoch, output=output, stage="train")
                 train_timer.step()
                 if it == train_size - 1:

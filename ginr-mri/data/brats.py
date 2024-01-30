@@ -119,12 +119,16 @@ class BraTS(Dataset):
             if opt == BraTSScanTypes.NA: continue
             path = item[opt]
             t = torch.tensor(nib.load(path).get_fdata(), device=self.device, dtype=torch.float32) # type:ignore
+            # normalize 
+            t = (t - torch.min(t)) * 2 / (torch.max(t) - torch.min(t)) - 1
             input_list.append(t) 
 
         for opt in self.output_options:
             if opt == BraTSScanTypes.NA: continue
             path = item[opt]
             t = torch.tensor(nib.load(path).get_fdata(), device=self.device, dtype=torch.float32) # type:ignore
+            # normalize 
+            t = (t - torch.min(t)) * 2 / (torch.max(t) - torch.min(t)) - 1
             output_list.append(t)
 
         input = torch.stack(input_list)
@@ -143,6 +147,8 @@ class BraTS(Dataset):
         for opt in self.input_options:
             path = item[opt]
             t = torch.tensor(nib.load(path).get_fdata(), device=self.device, dtype=torch.float32) # type:ignore
+            # normalize 
+            t = (t - torch.min(t)) * 2 / (torch.max(t) - torch.min(t)) - 1
             input_list.append(t)
 
         target_idx = random.randrange(0, len(input_list))
