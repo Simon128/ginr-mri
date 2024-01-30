@@ -4,12 +4,15 @@ from omegaconf import OmegaConf
 import torch
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
+import logging
 
 from .engine import Engine
 from .data import build_data
 from .models import build_model
 from .hooks import build_hooks
 from .optimizer import build_optimizer
+
+logging.basicConfig(level=logging.NOTSET)
 
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = 'localhost'

@@ -21,7 +21,7 @@ def shape2coordinate(spatial_shape, batch_size, min_value=-1.0, max_value=1.0, u
         _coords = (0.5 + torch.arange(num_s, device=device)) / num_s
         _coords = min_value + (max_value - min_value) * _coords
         coords.append(_coords)
-    coords = torch.meshgrid(*coords)  #, indexing="ij"
+    coords = torch.meshgrid(*coords, indexing="ij")  
     coords = torch.stack(coords, dim=-1)
     ones_like_shape = (1,) * coords.ndim
     coords = coords.unsqueeze(0).repeat(batch_size, *ones_like_shape)
@@ -46,9 +46,9 @@ class CoordSampler(nn.Module):
             xs = xs.unsqueeze(0)
         else:
             assert xs.ndim == 5
-        batch_size, stack_size, spatial_shape = xs.shape[0], xs.shape[1], xs.shape[2:]
+        batch_size, spatial_shape = xs.shape[0], xs.shape[2:]
 
-        return shape2coordinate(spatial_shape, batch_size, min_value, max_value, upsample_ratio, device).unsqueeze(1).repeat((1, stack_size, 1, 1, 1, 1))
+        return shape2coordinate(spatial_shape, batch_size, min_value, max_value, upsample_ratio, device)
 
     def forward(self, xs, coord_range=None, upsample_ratio=1.0, device=None):
         coords = self.base_sampler(xs, coord_range, upsample_ratio, device)

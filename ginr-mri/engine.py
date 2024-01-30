@@ -8,9 +8,7 @@ import torch.distributed as dist
 import logging
 
 from .hooks.hook import Hook
-from .data import build_data
-from .models import build_model
-from .utils import Timer
+from .utils import Timer, save_tensor_as_nifti
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +106,7 @@ class Engine:
                     with torch.cuda.amp.autocast_mode.autocast():
                         output = model(batch)
                     scaler.scale(output.loss).backward()
-                    scaler.step(self.optimizer)
+                    scaler.step(optimizer)
                     scaler.update()
                 else:
                     output = model(batch)
@@ -150,6 +148,14 @@ class Engine:
                 val_timer.step()
                 if it == val_size - 1:
                     logger.info(f"Validating {it + 1}/{val_size} in epoch {epoch} on rank {self.rank} -- elapsed {val_timer.get_elapsed()} -- eta: {val_timer.get_eta(val_size - it)}")
+                    output = model.full_prediction(batch, verbose=True)
+                    test = output.inr_out.prediction
+                    sample_mses = torch.reshape((test[0][0].unsqueeze(0) - batch[0][0][0].unsqueeze(0)) ** 2, (1, -1)).mean(dim=-1)
+                    psnr = (-10 * torch.log10(sample_mses)).mean()
+                    save_tensor_as_nifti(test[0][0], f"{epoch}.nii") # first item of batch and channel t1
+                    save_tensor_as_nifti(batch[0][0][0], f"ground_truth.nii")
+                    logger.info(f"PSNR: {psnr}")
+
         self.run_hooks("post_validation_epoch", engine=self, epoch=epoch)
         model.train()
                 

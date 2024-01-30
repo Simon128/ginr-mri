@@ -27,11 +27,11 @@ model:
     output_dim: 4
     ff_sigma: 1024
     ff_dim: 120
+    normalize_weights: True
     modulated_layers: [1]
     backbone_spatial_feature_dimensions: [7680]
     modulated_layers_to_backbone_features_map:
       1: 4
-    normalize_weights: True
   coord_sampler:
     coord_range: [-1.0, 1.0]
   subsampler:
@@ -53,7 +53,7 @@ hooks:
     priority: 100
     cfg:
       directory: /home/simon/tum/mri-runs/debug
-      batch_log_freq: 1
+      batch_log_freq: 10
 engine:
   epochs: 100
   batch_size: 2
