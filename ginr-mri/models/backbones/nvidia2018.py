@@ -52,6 +52,13 @@ class Nvidia2018(nn.Module):
 
         changes to the original:
         - using batch norm instead of group norm
+
+        output shapes (e.g. brats (d, h, w) == (160, 192, 128)):
+        - (b, c, d, h, w)
+        - (b, 32, 160, 192, 128)
+        - (b, 64, 80, 96, 64)
+        - (b, 128, 40, 48, 32)
+        - (b, 256, 20, 24, 16)
     '''
     def __init__(self) -> None:
         super().__init__()

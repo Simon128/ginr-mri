@@ -18,6 +18,30 @@ data:
 model:
   name: "base"
   backbone: "nvidia2018"
+  latent_transform:
+    name: convolutional
+    levels:
+      - n_layer: 2
+        strides: [2, 2]
+        padding: [1, 0]
+        channels: [128, 256]
+        kernel_size: [3, 1]
+        backbone_idx: 2
+        input_channels: 64
+      - n_layer: 1
+        strides: [2]
+        padding: [0]
+        channels: [256]
+        kernel_size: [1]
+        backbone_idx: 3
+        input_channels: 128
+      - n_layer: 1
+        strides: [1]
+        padding: ["same"]
+        channels: [256]
+        kernel_size: [1]
+        backbone_idx: 4
+        input_channels: 256
   inr:
     name: weight_modulated_inr
     n_layer: 5
@@ -28,10 +52,12 @@ model:
     ff_sigma: 1024
     ff_dim: 120
     normalize_weights: True
-    modulated_layers: [1]
-    backbone_spatial_feature_dimensions: [7680]
+    modulated_layers: [1, 2, 3]
+    backbone_spatial_feature_dimensions: [7680, 7680, 7680, 7680]
     modulated_layers_to_backbone_features_map:
-      1: 4
+      1: 0
+      2: 1
+      3: 2
   coord_sampler:
     coord_range: [-1.0, 1.0]
   subsampler:
@@ -44,18 +70,13 @@ optimizer:
   betas: [0.9, 0.999] #[0.9, 0.95]
   max_gn: null
 hooks:
-  - hook: model_checkpoint
-    priority: 1
-    cfg:
-      directory: /home/simon/tum/mri-runs/debug
-      frequency_per_epoch: 1
   - hook: tensorboard
     priority: 100
     cfg:
       directory: /home/simon/tum/mri-runs/debug
       batch_log_freq: 10
 engine:
-  epochs: 100
+  epochs: 1000
   batch_size: 2
   amp: false
   validation_frequency: 1.0

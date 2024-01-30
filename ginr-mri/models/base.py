@@ -10,6 +10,7 @@ from .inr import build_inr
 from ..utils import CoordSampler, CoordSamplerConfig, SubSampler, SubSamplerConfig
 from .model_output import ModelOutput
 from .inr.inr_output import INROutput
+from .latent_transform import build_latent_transform
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ logger = logging.getLogger(__name__)
 class BaseModelConfig:
     name: str = "base"
     backbone: str = "nvidia2018"
+    latent_transform: Any = None
     inr: Any = MISSING
     coord_sampler: CoordSamplerConfig = MISSING
     subsampler: SubSamplerConfig = MISSING
@@ -33,6 +35,10 @@ class BaseModel(nn.Module):
         super().__init__()
         self.config = config
         self.backbone = build_backbone(config.backbone)
+        if config.latent_transform is not None:
+            self.latent_transform = build_latent_transform(config.latent_transform.name, config.latent_transform)
+        else:
+            self.latent_transform = None
         self.inr = build_inr(config.inr.name, config.inr)
         self.coord_sampler = CoordSampler(config.coord_sampler)
         self.subsampler = SubSampler(config.subsampler)
@@ -40,6 +46,8 @@ class BaseModel(nn.Module):
     def full_prediction(self, batch: tuple[torch.Tensor, torch.Tensor], verbose = False):
         x, target = batch
         z = self.backbone(x)
+        if self.latent_transform:
+            z = self.latent_transform(z)
         coord = self.sample_coord_input(target)
         batch_size, depth, height, _, _ = coord.shape
         channels = target.shape[1]
@@ -90,6 +98,8 @@ class BaseModel(nn.Module):
     def forward(self, batch: tuple[torch.Tensor, torch.Tensor], coord: torch.Tensor | None = None):
         x, target = batch
         z = self.backbone(x)
+        if self.latent_transform:
+            z = self.latent_transform(z)
         if not coord:
             coord = self.sample_coord_input(target)
         subsample_coord_idxs = self.subsampler.subsample_coords_idx(target)

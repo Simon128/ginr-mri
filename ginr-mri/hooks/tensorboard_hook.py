@@ -37,6 +37,7 @@ class TensorboardHook(Hook):
         **kwargs
     ) -> dict | None:
         self.train_size = len(train_dataloader)
+        self.val_size = len(val_dataloader)
 
     def post_model_step(
         self, 
@@ -54,6 +55,10 @@ class TensorboardHook(Hook):
                 global_step = epoch * self.train_size + iteration_step
                 if global_step % self.batch_log_freq == 0:
                     self.train_writer.add_scalar(k, v, global_step)
+            if stage == "val":
+                global_step = epoch * self.val_size + iteration_step
+                if global_step % self.batch_log_freq == 0:
+                    self.val_writer.add_scalar(k, v, global_step)
 
     def post_validation_epoch(
         self, 
