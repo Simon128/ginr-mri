@@ -8,6 +8,7 @@ class ModelOutput:
     backbone_out: list[torch.Tensor] 
     inr_out: INROutput 
     loss: torch.Tensor | None = None
+    loss_dict: dict = field(default_factory=dict)
     subsampled_coords: torch.Tensor | None = None
     subsampled_targets: torch.Tensor | None = None
     additional: dict = field(default_factory=dict)

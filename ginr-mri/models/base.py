@@ -58,6 +58,7 @@ class BaseModel(nn.Module):
             backbone_out=z,
             inr_out=inr_output,
             subsampled_coords=coord,
-            subsampled_targets=target
+            subsampled_targets=target,
+            loss_dict={"loss": inr_output.loss}
         )
         return output

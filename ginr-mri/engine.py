@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader, Dataset
 import torch.distributed as dist
 import logging
 
+from .hooks.hook import Hook
 from .data import build_data
 from .models import build_model
 from .utils import Timer
@@ -14,7 +15,7 @@ from .utils import Timer
 logger = logging.getLogger(__name__)
 
 @dataclass
-class TrainerConfig:
+class EngineConfig:
     epochs: int = MISSING
     batch_size: int = 4
     amp: bool = False
@@ -26,18 +27,14 @@ class TrainerConfig:
         config = OmegaConf.merge(defaults, config)
         return config
 
-class Trainer:
-    def __init__(self, config_path) -> None:
+class Engine:
+    def __init__(self, config: EngineConfig, hooks: list[Hook]) -> None:
         if dist.is_initialized():
             self.rank = dist.get_rank()
         else:
             self.rank = 0
-        conf = OmegaConf.load(config_path)
-        self.train_dataset, self.val_dataset = build_data(conf.data.name, conf.data, self.rank)
-        self.conf = TrainerConfig.create(conf.trainer)
-        self.model = build_model(conf.model.name, conf.model).to(self.rank)
-        self.optimizer = Adam(self.model.parameters(), lr=1e-4) # todo: make configurable
-        self.hooks = [] # todo
+        self.conf = config
+        self.hooks = hooks
         sorted(self.hooks, key=lambda h: h.priority, reverse=True)
         self.resume_epoch = 0 # todo
         self.epochs = self.conf.epochs - self.resume_epoch
@@ -70,20 +67,20 @@ class Trainer:
             )
         return dataloader
 
-    def fit(self):
+    def fit(self, model, train_dataset, val_dataset, optimizer):
         torch.backends.cudnn.benchmark = True
-        trainloader = self.get_dataloader(self.train_dataset, shuffle=False)
-        valloader = self.get_dataloader(self.val_dataset, shuffle=False)
+        trainloader = self.get_dataloader(train_dataset)
+        valloader = self.get_dataloader(val_dataset, shuffle=False)
         self.run_hooks(
-            "pre_fit", engine=self, model=self.model, 
-            train_dataset=self.train_dataset, val_dataset=self.val_dataset, 
+            "pre_fit", engine=self, model=model, 
+            train_dataset=train_dataset, val_dataset=val_dataset, 
             train_dataloader=trainloader, val_dataloader=valloader, 
-            optimizer=self.optimizer
+            optimizer=optimizer
         )
         train_size = len(trainloader) 
         val_step = math.floor(train_size / self.conf.validation_frequency)
         log_step = train_size // 10
-        self.model.train()
+        model.train()
         epoch_timer = Timer()
         if self.conf.amp:
             scaler = torch.cuda.amp.grad_scaler.GradScaler()
@@ -103,20 +100,20 @@ class Trainer:
                 if it % log_step == 0:
                     logger.info(
                         f"Training {it}/{train_size} in epoch {e + self.resume_epoch} on rank {self.rank} -- loss: {sum(train_loss) / len(train_loss)} -- elapsed {train_timer.get_elapsed()} -- eta: {train_timer.get_eta(train_size - it)}")
-                self.optimizer.zero_grad()
+                optimizer.zero_grad()
                 batch = next(train_iter)
                 self.run_hooks("pre_model_step", engine=self, iteration_step=it, epoch=e + self.resume_epoch, batch=batch, stage="train")
 
                 if self.conf.amp:
                     with torch.cuda.amp.autocast_mode.autocast():
-                        output = self.model(batch)
+                        output = model(batch)
                     scaler.scale(output.loss).backward()
                     scaler.step(self.optimizer)
                     scaler.update()
                 else:
-                    output = self.model(batch)
+                    output = model(batch)
                     output.loss.backward()
-                    self.optimizer.step()
+                    optimizer.step()
                 
                 train_loss = train_loss[1:]
                 train_loss.append(output.loss.item())
@@ -125,21 +122,21 @@ class Trainer:
                 if it == train_size - 1:
                     logger.info(f"Training {it + 1}/{train_size} in epoch {e + self.resume_epoch} on rank {self.rank} -- elapsed {train_timer.get_elapsed()} -- eta: {train_timer.get_eta(train_size - it)}")
                 if (it + 1) % val_step == 0:
-                    self.validate(valloader, e + self.resume_epoch)
+                    self.validate(model, valloader, e + self.resume_epoch)
 
             self.run_hooks("post_training_epoch", engine=self, epoch=e + self.resume_epoch)
             epoch_timer.step()
             logger.info(f"Running Epoch {e + self.resume_epoch + 1}/{self.epochs} on rank {self.rank} -- elapsed: {epoch_timer.get_elapsed()} -- eta: {epoch_timer.get_eta(self.epochs - e)}")
     
-        self.run_hooks("post_fit", engine=self, model=self.model, train_dataset=self.train_dataset, val_dataset=self.val_dataset, optimizer=self.optimizer)
+        self.run_hooks("post_fit", engine=self, model=model, train_dataset=train_dataset, val_dataset=val_dataset, optimizer=optimizer)
 
-    def validate(self, valloader, epoch: int):
+    def validate(self, model, valloader, epoch: int):
         self.run_hooks("pre_validation_epoch", engine=self, epoch=epoch)
         val_size = len(valloader)
         val_iter = iter(valloader)
         log_step = val_size // 10
         val_timer = Timer()
-        self.model.eval()
+        model.eval()
         val_loss = 0
         with torch.inference_mode():
             for it in range(val_size):
@@ -147,12 +144,12 @@ class Trainer:
                     logger.info(f"Validating {it}/{val_size} in epoch {epoch} on rank {self.rank} -- elapsed {val_timer.get_elapsed()} -- eta: {val_timer.get_eta(val_size - it)}")
                 batch = next(val_iter)
                 self.run_hooks("pre_model_step", engine=self, iteration_step=it, epoch=epoch, batch=batch, stage="val")
-                output = self.model(batch)
+                output = model(batch)
                 val_loss += output.loss.item()
                 self.run_hooks("post_model_step", engine=self, iteration_step=it, epoch=epoch, output=output, stage="val")
                 val_timer.step()
                 if it == val_size - 1:
                     logger.info(f"Validating {it + 1}/{val_size} in epoch {epoch} on rank {self.rank} -- elapsed {val_timer.get_elapsed()} -- eta: {val_timer.get_eta(val_size - it)}")
         self.run_hooks("post_validation_epoch", engine=self, epoch=epoch)
-        self.model.train()
+        model.train()
                 
