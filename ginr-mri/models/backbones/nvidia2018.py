@@ -1,6 +1,19 @@
 from typing import OrderedDict
 import torch.nn as nn
 import torch
+from dataclasses import dataclass
+from omegaconf import OmegaConf
+
+@dataclass
+class Nvidia2018Config:
+    name: str = "nvidia2018"
+    input_channels: int = 1
+
+    @classmethod
+    def create(cls, config):
+        defaults = OmegaConf.structured(cls())
+        config = OmegaConf.merge(defaults, config)
+        return config
 
 class Nvidia2018EncoderBlock(nn.Module):
     def __init__(self, in_channels, downsample = False) -> None:
@@ -60,9 +73,10 @@ class Nvidia2018(nn.Module):
         - (b, 128, 40, 48, 32)
         - (b, 256, 20, 24, 16)
     '''
-    def __init__(self) -> None:
+    def __init__(self, config: Nvidia2018Config) -> None:
         super().__init__()
-        self.first_layer = nn.Conv3d(in_channels=1, out_channels=32, kernel_size=3, padding="same")
+        input_channels = config.input_channels
+        self.first_layer = nn.Conv3d(in_channels=input_channels, out_channels=32, kernel_size=3, padding="same")
         self.block_1 = Nvidia2018EncoderBlock(in_channels=32, downsample=False)
         self.block_2_a = Nvidia2018EncoderBlock(in_channels=32, downsample=True)
         self.block_2_b = Nvidia2018EncoderBlock(in_channels=64, downsample=False)

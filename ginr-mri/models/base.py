@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class BaseModelConfig:
     name: str = "base"
-    backbone: str = "nvidia2018"
+    backbone: Any = MISSING
     latent_transform: Any = None
     inr: Any = MISSING
     coord_sampler: CoordSamplerConfig = MISSING
@@ -34,7 +34,7 @@ class BaseModel(nn.Module):
     def __init__(self, config: BaseModelConfig) -> None:
         super().__init__()
         self.config = config
-        self.backbone = build_backbone(config.backbone)
+        self.backbone = build_backbone(config.backbone.name, config.backbone)
         if config.latent_transform is not None:
             self.latent_transform = build_latent_transform(config.latent_transform.name, config.latent_transform)
         else:

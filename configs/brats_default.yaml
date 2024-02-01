@@ -17,7 +17,9 @@ data:
         size: [160, 192, 128]
 model:
   name: "base"
-  backbone: "nvidia2018"
+  backbone:
+    name: "nvidia2018"
+    input_channels: 1
   latent_transform:
     name: convolutional
     levels:
