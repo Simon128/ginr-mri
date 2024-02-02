@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import torch
 import math
 from torch.optim._multi_tensor import Adam
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, DistributedSampler
 import torch.distributed as dist
 import logging
 
