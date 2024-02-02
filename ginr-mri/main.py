@@ -5,6 +5,7 @@ import torch
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 import logging
+import torch.multiprocessing as mp
 
 from .engine import Engine
 from .data import build_data
