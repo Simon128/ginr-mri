@@ -1,6 +1,7 @@
 import enum
 from dataclasses import dataclass
 import logging
+from omegaconf import OmegaConf
 
 from .wandb_hook import WandbHook
 from .hook import Hook
@@ -15,25 +16,34 @@ logger = logging.getLogger(__name__)
 class HooksEnum(enum.StrEnum):
     early_stop = "early_stop"
     model_checkpoint = "model_checkpoint"
-    tensorboard_hook = "tensorboard"
+    tensorboard = "tensorboard"
     lr_scheduler = "lr_scheduler"
     inr_metrics = "inr_metrics"
     visualization = "visualization"
     wandb = "wandb"
+    none= "none"
 
 @dataclass
 class HookCFG:
     hook: HooksEnum
     priority: int
-    cfg: dict
+    cfg: dict | None = None
+
+    @classmethod
+    def create(cls, config):
+        defaults = OmegaConf.structured(cls(HooksEnum.none, priority=100))
+        config = OmegaConf.merge(defaults, config)
+        return config
 
 def build_hook(cfg: HookCFG, full_cfg) -> Hook:
+    if cfg.cfg is None:
+        cfg.cfg = {}
     match HooksEnum(cfg.hook):
         case HooksEnum.early_stop: return Hook(cfg.priority)
         case HooksEnum.model_checkpoint: return ModelCheckpointHook(cfg.priority, **cfg.cfg)
-        case HooksEnum.tensorboard_hook: return TensorboardHook(cfg.priority, **cfg.cfg)
+        case HooksEnum.tensorboard: return TensorboardHook(cfg.priority, **cfg.cfg)
         case HooksEnum.lr_scheduler: return LRSchedulerHook(cfg.priority, **cfg.cfg)
-        case HooksEnum.inr_metrics: return INRMetricsHook(cfg.priority, **cfg.cfg)
+        case HooksEnum.inr_metrics: return INRMetricsHook(cfg.priority)
         case HooksEnum.visualization: return VisualizationHook(cfg.priority, **cfg.cfg)
         case HooksEnum.wandb: return WandbHook(cfg.priority, full_cfg, **cfg.cfg)
         case _:
@@ -44,5 +54,6 @@ def build_hook(cfg: HookCFG, full_cfg) -> Hook:
 def build_hooks(cfgs: list[HookCFG], full_cfg):
     hooks = []
     for hcfg in cfgs:
-        hooks.append(build_hook(hcfg, full_cfg))
+        _hcfg = HookCFG.create(hcfg)
+        hooks.append(build_hook(_hcfg, full_cfg))
     return hooks

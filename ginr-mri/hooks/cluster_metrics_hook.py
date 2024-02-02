@@ -8,8 +8,10 @@ from torch.optim import Optimizer
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 import matplotlib.pyplot as plt
+from matplotlib import colormaps
 import numpy as np
 import torch.distributed as dist
+import umap
 
 from .hook import Hook
 from ..models import ModelOutput
@@ -21,11 +23,13 @@ if TYPE_CHECKING:
 class ClusterMetricsMode(StrEnum):
     before_latent_transformation = "before_latent_transformation"
     after_latent_transformation = "after_latent_transformation"
+    after_weight_modulation = "after_weight_modulation"
 
 class ClusterMetricsHook(Hook):
     def __init__(
             self, 
             priority: int = 0, 
+            frequency: int = 100,
             mode: ClusterMetricsMode = ClusterMetricsMode.before_latent_transformation,
             stages: list[str] = ["train", "val"],
             embedding_positions: list[int] = [],
@@ -36,6 +40,7 @@ class ClusterMetricsHook(Hook):
         for s in stages:
             assert s in ["train", "val"]
         self.mode = mode
+        self.frequency = frequency
         self.min_clusters = min_clusters
         self.max_clusters = max_clusters
         self.stages = stages
@@ -68,6 +73,14 @@ class ClusterMetricsHook(Hook):
         ax.set_title(title)
         return fig
 
+    def process_batch(self, batch):
+        if batch[2] == "channelwise":
+            batch_size = batch[0].shape[0]
+            return batch[0].flatten(start_dim=0, end_dim=1), np.array([0, 1, 2, 3] * batch_size)
+        else:
+            batch_size = batch[0].shape[0]
+            return batch[0], np.array([0] * batch_size)
+
     def get_latent_embeddings(self, mode: str, emb_pos: int, max_elements: int = 1000):
         if mode == "valid":
             loader = self.val_dataloader
@@ -80,11 +93,8 @@ class ClusterMetricsHook(Hook):
         with torch.inference_mode():
             pbar = tqdm(total=total, desc=f"Inferring latent embeddings from pos {emb_pos}")
             for batch in loader:
-                if isinstance(batch, tuple) or isinstance(batch, list):
-                    # if get_class is set we get a tuple/list as batch
-                    labels.append(batch[1].cpu().numpy())
-                    xs = batch[0]
-                else : xs = batch
+                xs, label = self.process_batch(batch)
+                labels.append(label)
                 xs = xs.to(self.device)
                 if self.mode == ClusterMetricsMode.before_latent_transformation:
                     emb = self.model.backbone(xs)
@@ -94,8 +104,8 @@ class ClusterMetricsHook(Hook):
                         emb = self.model.latent_transform(emb)
 
                 embeddings.append(emb[emb_pos].cpu().numpy())
-                n_elements = sum([le.shape[0] for le in embeddings])
-                pbar.update(min(embeddings[-1].shape[0], total - (n_elements - embeddings[-1].shape[0])))
+                n_elements = sum([xs.shape[0] for _ in embeddings])
+                pbar.update(min(xs.shape[0], total - (n_elements - xs.shape[0])))
                 if n_elements >= total:
                     break
             pbar.close()
@@ -105,6 +115,21 @@ class ClusterMetricsHook(Hook):
             labels = np.concatenate(labels, axis=0)
 
         return embeddings, labels
+
+    def get_umap(self, embeddings, labels, dims=2):
+        umap_embeddings = umap.UMAP(n_components=dims).fit_transform(embeddings)
+        fig = plt.figure(figsize=(20,20))
+        ax = fig.add_subplot(111)
+        ax.scatter(
+            umap_embeddings[:, 0],
+            umap_embeddings[:, 1],
+            cmap=colormaps["tab10"],
+            c=labels if len(labels) > 0 else None,
+            s=10
+        )
+        ax.set_aspect('equal', 'datalim')
+        ax.set_title(f"UMAP - Embeddings {dims}D")
+        return fig
 
     def get_cluster_eval(self, embeddings, labels):
         # is start and end reasonable?
@@ -141,27 +166,15 @@ class ClusterMetricsHook(Hook):
             recall=recall_scores,
             rand_index=rand_scores,
             jaccard_index=jaccard_scores,
-            f1=f1_scores
+            f1=f1_scores,
+            plt_silhoutte_scores=self.get_plot("Latent Clustering: Silhouette Scores", "silhoutte score", "#clusters", cluster_nums, sil_scores, np.arange(-1, 1.1, 0.2)),
+            plt_purity=self.get_plot("Latent Clustering: Purity Scores", "purity", "#clusters", cluster_nums, purity_scores),
+            plt_precision=self.get_plot("Latent Clustering: Precision Scores", "precision", "#clusters", cluster_nums, precision_scores),
+            plt_recall=self.get_plot("Latent Clustering: Recall Scores", "recall", "#clusters", cluster_nums, recall_scores),
+            plt_rand_index=self.get_plot("Latent Clustering: Rand Scores", "rand score", "#clusters", cluster_nums, rand_scores),
+            plt_jaccard_index=self.get_plot("Latent Clustering: Jaccard Scores", "jaccard score", "#clusters", cluster_nums, jaccard_scores),
+            plt_f1=self.get_plot("Latent Clustering: F1 Scores", "f1 score", "#clusters", cluster_nums, f1_scores)
         )
-
-    def post_model_step(
-        self, 
-        engine: 'Engine', 
-        iteration_step: int, 
-        epoch: int,
-        output: ModelOutput, 
-        stage: str,
-        **kwargs
-    ) -> dict | None:
-        if stage in self.stages:
-            for emb_pos in self.embedding_positions:
-                embeddings, labels = self.get_latent_embeddings(stage, emb_pos)
-                metrics = self.get_cluster_eval(embeddings, labels)
-
-        if stage == "train" and stage in self.stages:
-            pass
-        elif stage == "val" and stage in self.stages:
-            pass
 
     def post_validation_epoch(
         self, 
@@ -169,7 +182,24 @@ class ClusterMetricsHook(Hook):
         epoch: int,
         **kwargs
     ) -> dict | None:
-        pass
+        if "val" in self.stages and epoch % self.frequency == 0:
+            output = {
+            }
+            for emb_pos in self.embedding_positions:
+                embeddings, labels = self.get_latent_embeddings("val", emb_pos)
+                metrics = self.get_cluster_eval(embeddings, labels)
+                umap_2d = self.get_umap(embeddings, labels, 2)
+                umap_3d = self.get_umap(embeddings, labels, 3)
+                output[emb_pos] = {
+                    "umap_2d": umap_2d,
+                    "umap_3d": umap_3d
+                }
+                for k, val in metrics.items():
+                    output[emb_pos][k] = val
+
+            return {
+                "cluster_metrics": output
+            }
 
     def post_training_epoch(
         self, 
@@ -177,4 +207,22 @@ class ClusterMetricsHook(Hook):
         epoch: int,
         **kwargs
     ) -> dict | None:
-        pass
+        if "train" in self.stages and epoch % self.frequency == 0:
+            output = {
+                "mode": str(self.mode)
+            }
+            for emb_pos in self.embedding_positions:
+                embeddings, labels = self.get_latent_embeddings("train", emb_pos)
+                metrics = self.get_cluster_eval(embeddings, labels)
+                umap_2d = self.get_umap(embeddings, labels, 2)
+                umap_3d = self.get_umap(embeddings, labels, 3)
+                output[emb_pos] = {
+                    "umap_2d": umap_2d,
+                    "umap_3d": umap_3d
+                }
+                for k, val in metrics.items():
+                    output[emb_pos][k] = val
+
+            return {
+                "cluster_metrics": output
+            }

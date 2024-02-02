@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from ..engine import Engine
 
 class INRMetricsHook(Hook):
-    def __init__(self, priority: int = 0, ) -> None:
+    def __init__(self, priority: int = 0) -> None:
         super().__init__(priority)
 
     def pre_validation_epoch(
@@ -58,17 +58,17 @@ class INRMetricsHook(Hook):
         loss = output.inr_out.loss
         loss = loss.clone().detach().cpu().item()
         if stage == "train":
-            psnr = compute_psnr(output.inr_out.prediction, self.current_train_batch[1])
+            psnr = compute_psnr(output.inr_out.prediction, output.subsampled_targets)
             self.train_loss_dict_stack.setdefault("total_loss", [])
             self.train_loss_dict_stack["total_loss"].append(loss)
             self.train_metrics_stack.setdefault("psnr", [])
-            self.train_metrics_stack["psnr"] = psnr
+            self.train_metrics_stack["psnr"].append(psnr.clone().detach().cpu().item())
         elif stage == "val":
-            psnr = compute_psnr(output.inr_out.prediction, self.current_val_batch[1])
+            psnr = compute_psnr(output.inr_out.prediction, output.subsampled_targets)
             self.val_loss_dict_stack.setdefault("total_loss", [])
             self.val_loss_dict_stack["total_loss"].append(loss)
             self.val_metrics_stack.setdefault("psnr", [])
-            self.val_metrics_stack["psnr"] = psnr
+            self.val_metrics_stack["psnr"].append(psnr.clone().detach().cpu().item())
 
     def post_validation_epoch(
         self, 
@@ -77,7 +77,7 @@ class INRMetricsHook(Hook):
         **kwargs
     ) -> dict | None:
         return {
-            "inr_metrics": {
+            "inr_metric": {
                 **{k: sum(v) / len(v) for k, v in self.val_loss_dict_stack.items()},
                 **{k: sum(v) / len(v) for k, v in self.val_metrics_stack.items()}
             }
@@ -90,7 +90,7 @@ class INRMetricsHook(Hook):
         **kwargs
     ) -> dict | None:
         return {
-            "inr_metrics": {
+            "inr_metric": {
                 **{k: sum(v) / len(v) for k, v in self.train_loss_dict_stack.items()},
                 **{k: sum(v) / len(v) for k, v in self.train_metrics_stack.items()}
             }

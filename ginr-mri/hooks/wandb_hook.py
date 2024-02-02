@@ -11,11 +11,12 @@ if TYPE_CHECKING:
     from ..engine import Engine
 
 class WandbHook(Hook):
-    def __init__(self, priority: int = 0, full_cfg = None, project="NA") -> None:
+    def __init__(self, priority: int = 0, full_cfg = None, project="NA", name: str | None = None) -> None:
         super().__init__(priority)
         wandb.init(
             project=project,
-            config=omegaconf.OmegaConf.to_container(full_cfg, resolve=True)
+            config=omegaconf.OmegaConf.to_container(full_cfg, resolve=True),
+            name=name
         )
 
     def post_validation_epoch(
@@ -34,7 +35,7 @@ class WandbHook(Hook):
             for k, v in backbone_metrics.items():
                 wandb_logs[f"val/backbone/{k}"] = v
         latent_transformation_metrics = kwargs.get("latent_transformation_metric")
-        if inr_metrics is not None:
+        if latent_transformation_metrics is not None:
             for k, v in latent_transformation_metrics.items():
                 wandb_logs[f"val/latent_transformation/{k}"] = v
 
@@ -48,19 +49,19 @@ class WandbHook(Hook):
                 for c in range(num_channels):
                     p, t = visualization["slices_saggital"]
                     slice_grid = torchvision.utils.make_grid(p[b, :, c, ...].unsqueeze(1), nrow=4, normalize=True)
-                    wandb_logs[f"val/saggital_slices/prediction/batch_{b}/channel_{c}"] = wandb.Image(slice_grid)
+                    wandb_logs[f"val/saggital_slices_channel_{c}/prediction_batch_{b}"] = wandb.Image(slice_grid)
                     slice_grid = torchvision.utils.make_grid(t[b, :, c, ...].unsqueeze(1), nrow=4, normalize=True)
-                    wandb_logs[f"val/saggital_slices/target/batch_{b}/channel_{c}"] = wandb.Image(slice_grid)
+                    wandb_logs[f"val/saggital_slices_channel_{c}/target_batch_{b}"] = wandb.Image(slice_grid)
                     p, t = visualization["slices_axial"]
                     slice_grid = torchvision.utils.make_grid(p[b, :, c, ...].unsqueeze(1), nrow=4, normalize=True)
-                    wandb_logs[f"val/axial_slices/prediction/batch_{b}/channel_{c}"] = wandb.Image(slice_grid)
+                    wandb_logs[f"val/axial_slices_channel_{c}/prediction_batch_{b}"] = wandb.Image(slice_grid)
                     slice_grid = torchvision.utils.make_grid(t[b, :, c, ...].unsqueeze(1), nrow=4, normalize=True)
-                    wandb_logs[f"val/axial_slices/target/batch_{b}/channel_{c}"] = wandb.Image(slice_grid)
+                    wandb_logs[f"val/axial_slices_channel_{c}/target_batch_{b}"] = wandb.Image(slice_grid)
                     p, t = visualization["slices_coronal"]
                     slice_grid = torchvision.utils.make_grid(p[b, :, c, ...].unsqueeze(1), nrow=4, normalize=True)
-                    wandb_logs[f"val/coronal_slices/prediction/batch_{b}/channel_{c}"] = wandb.Image(slice_grid)
+                    wandb_logs[f"val/coronal_slices_channel_{c}/prediction_batch_{b}"] = wandb.Image(slice_grid)
                     slice_grid = torchvision.utils.make_grid(t[b, :, c, ...].unsqueeze(1), nrow=4, normalize=True)
-                    wandb_logs[f"val/coronal_slices/target/batch_{b}/channel_{c}"] = wandb.Image(slice_grid)
+                    wandb_logs[f"val/coronal_slices_channel_{c}/target_batch_{b}"] = wandb.Image(slice_grid)
 
         wandb.log(wandb_logs, step=epoch)
 
@@ -80,7 +81,7 @@ class WandbHook(Hook):
             for k, v in backbone_metrics.items():
                 wandb_logs[f"train/backbone/{k}"] = v
         latent_transformation_metrics = kwargs.get("latent_transformation_metric")
-        if inr_metrics is not None:
+        if latent_transformation_metrics is not None:
             for k, v in latent_transformation_metrics.items():
                 wandb_logs[f"train/latent_transformation/{k}"] = v
 
@@ -94,18 +95,18 @@ class WandbHook(Hook):
                 for c in range(num_channels):
                     p, t = visualization["slices_saggital"]
                     slice_grid = torchvision.utils.make_grid(p[b, :, c, ...].unsqueeze(1), nrow=4, normalize=True)
-                    wandb_logs[f"train/saggital_slices/prediction/batch_{b}/channel_{c}"] = wandb.Image(slice_grid)
+                    wandb_logs[f"train/saggital_slices_channel_{c}/prediction_batch_{b}"] = wandb.Image(slice_grid)
                     slice_grid = torchvision.utils.make_grid(t[b, :, c, ...].unsqueeze(1), nrow=4, normalize=True)
-                    wandb_logs[f"train/saggital_slices/target/batch_{b}/channel_{c}"] = wandb.Image(slice_grid)
+                    wandb_logs[f"train/saggital_slices_channel_{c}/target_batch_{b}"] = wandb.Image(slice_grid)
                     p, t = visualization["slices_axial"]
                     slice_grid = torchvision.utils.make_grid(p[b, :, c, ...].unsqueeze(1), nrow=4, normalize=True)
-                    wandb_logs[f"train/axial_slices/prediction/batch_{b}/channel_{c}"] = wandb.Image(slice_grid)
+                    wandb_logs[f"train/axial_slices_channel_{c}/prediction_batch_{b}"] = wandb.Image(slice_grid)
                     slice_grid = torchvision.utils.make_grid(t[b, :, c, ...].unsqueeze(1), nrow=4, normalize=True)
-                    wandb_logs[f"train/axial_slices/target/batch_{b}/channel_{c}"] = wandb.Image(slice_grid)
+                    wandb_logs[f"train/axial_slices_channel_{c}/target_batch_{b}"] = wandb.Image(slice_grid)
                     p, t = visualization["slices_coronal"]
                     slice_grid = torchvision.utils.make_grid(p[b, :, c, ...].unsqueeze(1), nrow=4, normalize=True)
-                    wandb_logs[f"train/coronal_slices/prediction/batch_{b}/channel_{c}"] = wandb.Image(slice_grid)
+                    wandb_logs[f"train/coronal_slices_channel_{c}/prediction_batch_{b}"] = wandb.Image(slice_grid)
                     slice_grid = torchvision.utils.make_grid(t[b, :, c, ...].unsqueeze(1), nrow=4, normalize=True)
-                    wandb_logs[f"train/coronal_slices/target/batch_{b}/channel_{c}"] = wandb.Image(slice_grid)
+                    wandb_logs[f"train/coronal_slices_channel_{c}/target_batch_{b}"] = wandb.Image(slice_grid)
 
         wandb.log(wandb_logs, step=epoch)

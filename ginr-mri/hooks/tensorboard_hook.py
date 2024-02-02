@@ -37,7 +37,7 @@ class TensorboardHook(Hook):
             for k, v in backbone_metrics.items():
                 self.val_writer.add_scalar(f"backbone/{k}", v, epoch)
         latent_transformation_metrics = kwargs.get("latent_transformation_metric")
-        if inr_metrics is not None:
+        if latent_transformation_metrics is not None:
             for k, v in latent_transformation_metrics.items():
                 self.val_writer.add_scalar(f"latent_transformation/{k}", v, epoch)
 
@@ -90,7 +90,7 @@ class TensorboardHook(Hook):
             for k, v in backbone_metrics.items():
                 self.train_writer.add_scalar(f"backbone/{k}", v, epoch)
         latent_transformation_metrics = kwargs.get("latent_transformation_metric")
-        if inr_metrics is not None:
+        if latent_transformation_metrics is not None:
             for k, v in latent_transformation_metrics.items():
                 self.train_writer.add_scalar(f"latent_transformation/{k}", v, epoch)
 

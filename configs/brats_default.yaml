@@ -7,6 +7,7 @@ data:
     data_prep_option: "STACK"
     input_data: ["T1"]
     output_data: ["T1"]
+    cluster_annotations: "channelwise"
   source_transforms:
     - name: centercrop3d
       args:
@@ -23,14 +24,6 @@ model:
   latent_transform:
     name: convolutional
     levels:
-      - n_layer: 2
-        strides: [2, 1]
-        padding: [1, "same"]
-        channels: [128, 256]
-        kernel_size: [3, 1]
-        backbone_idx: 3
-        input_channels: 128
-        batch_norm: true
       - n_layer: 1
         strides: [1]
         padding: ["same"]
@@ -49,11 +42,10 @@ model:
     ff_sigma: 120
     ff_dim: 120
     normalize_weights: True
-    modulated_layers: [1, 2]
-    backbone_spatial_feature_dimensions: [7680, 7680]
+    modulated_layers: [1]
+    backbone_spatial_feature_dimensions: [7680]
     modulated_layers_to_backbone_features_map:
       1: 0
-      2: 1
   coord_sampler:
     coord_range: [-1.0, 1.0]
   subsampler:
@@ -62,7 +54,7 @@ model:
 optimizer:
   type: adam
   init_lr: 0.0001
-  weight_decay: 0.0
+  weight_decay: 0.0001
   betas: [0.9, 0.999] #[0.9, 0.95]
   max_gn: null
 hooks:
@@ -79,12 +71,15 @@ hooks:
     priority: 1
     cfg:
       directory: /home/simon/tum/mri-runs/debug
-      frequency: 1
+      frequency: 100
       num_slices: 8
   - hook: wandb
     priority: 100
     cfg:
-      project: debug
+      project: ginr-mri
+      name: baseline_t1
+  - hook: inr_metrics
+    priority: 1
 engine:
   epochs: 10000
   batch_size: 2

@@ -2,7 +2,7 @@ import nibabel as nib
 from pathlib import Path
 from torch.utils.data import Dataset
 import re
-from enum import IntFlag, auto, StrEnum 
+from enum import IntFlag, auto, StrEnum
 from omegaconf import OmegaConf
 import math
 from dataclasses import dataclass, field
@@ -31,6 +31,9 @@ class BraTSDataPrepOption(StrEnum):
     STACK = "STACK" 
     RANDOM_LEAVE_ONE_OUT = "RANDOM_LEAVE_ONE_OUT" 
 
+class BraTSClusterAnnotations(StrEnum):
+    channelwise = "channelwise"
+
 @dataclass
 class BraTSDataPrepConfig:
     use_lgg: bool = True
@@ -39,6 +42,7 @@ class BraTSDataPrepConfig:
     data_prep_option: BraTSDataPrepOption = BraTSDataPrepOption.STACK
     input_data: list[str] = field(default_factory=lambda: ["T1", "T2", "FLAIR", "T1CE"])
     output_data: list[str] = field(default_factory=lambda: ["T1", "T2", "FLAIR", "T1CE"])
+    cluster_annotations: BraTSClusterAnnotations = BraTSClusterAnnotations.channelwise
 
     @classmethod
     def create(cls, config):
@@ -81,6 +85,7 @@ class BraTS(Dataset):
         self.input_options = str_list_to_int_flag(data_prep_cfg.input_data, BraTSScanTypes)
         self.output_options = str_list_to_int_flag(data_prep_cfg.output_data, BraTSScanTypes)
         self.items = []
+        self.cluster_annotations = data_prep_cfg.cluster_annotations
 
         if data_prep_cfg.use_lgg:
             self.items += self._discover_data(str(self.lgg_path))
@@ -101,7 +106,16 @@ class BraTS(Dataset):
 
     def __getitem__(self, index):
         item = self.items[index]
-        return self._prepare_item(item)
+        _in, _out = self._prepare_item(item)
+        cluster_ann = self._prepare_cluster_annotation(_in, _out)
+        return (_in, _out, cluster_ann)
+
+    def _prepare_cluster_annotation(self, _in: torch.Tensor, _out: torch.Tensor):
+        match self.cluster_annotations:
+            case BraTSClusterAnnotations.channelwise:
+                return "channelwise"
+            case _:
+                raise TypeError(f"BraTS cluster annotation type {self.cluster_annotations} not supported")
 
     def _prepare_item(self, item):
         opt =  BraTSDataPrepOption(self.data_prep_cfg.data_prep_option)

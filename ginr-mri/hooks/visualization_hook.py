@@ -153,15 +153,15 @@ class VisualizationHook(Hook):
             dim_size = prediction.shape[-1]
             slice_step = dim_size // self.num_slices
             for idx in range(0, dim_size, slice_step):
-                axial_pred.append(prediction.select(-1, idx))
-                axial_target.append(batch[1].select(-1, idx))
+                axial_pred.append(torch.rot90(prediction.select(-1, idx), dims=[-2, -1]))
+                axial_target.append(torch.rot90(batch[1].select(-1, idx), dims=[-2, -1]))
 
             # coronal
             dim_size = prediction.shape[-2]
             slice_step = dim_size // self.num_slices
             for idx in range(0, dim_size, slice_step):
-                coronal_pred.append(torch.rot90(prediction.select(-2, idx), dims=[-2, -1], k=2))
-                coronal_target.append(torch.rot90(batch[1].select(-2, idx), dims=[-2, -1], k=2))
+                coronal_pred.append(torch.rot90(prediction.select(-2, idx), dims=[-2, -1]))
+                coronal_target.append(torch.rot90(batch[1].select(-2, idx), dims=[-2, -1]))
 
             saggital_pred = torch.stack(saggital_pred, dim=1)
             saggital_target = torch.stack(saggital_target, dim=1)
@@ -171,7 +171,7 @@ class VisualizationHook(Hook):
             coronal_target = torch.stack(coronal_target, dim=1)
 
             if self.directory is not None:
-                sub_dir = os.path.join(self.directory, "validation", "examples")
+                sub_dir = os.path.join(self.directory, "training", "examples")
                 os.makedirs(sub_dir, exist_ok=True)
                 for c in range(prediction.shape[1]):
                     file_name = os.path.join(sub_dir, f"pred_epoch_{epoch}_channel_{c}.nii")

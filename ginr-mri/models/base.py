@@ -43,8 +43,8 @@ class BaseModel(nn.Module):
         self.coord_sampler = CoordSampler(config.coord_sampler)
         self.subsampler = SubSampler(config.subsampler)
 
-    def full_prediction(self, batch: tuple[torch.Tensor, torch.Tensor], verbose = False):
-        x, target = batch
+    def full_prediction(self, batch: tuple[torch.Tensor, torch.Tensor, Any], verbose = False):
+        x, target, _ = batch
         z = self.backbone(x)
         if self.latent_transform:
             z = self.latent_transform(z)
@@ -95,8 +95,8 @@ class BaseModel(nn.Module):
         coord_inputs = coord_inputs + coord_noises
         return coord_inputs
 
-    def forward(self, batch: tuple[torch.Tensor, torch.Tensor], coord: torch.Tensor | None = None):
-        x, target = batch
+    def forward(self, batch: tuple[torch.Tensor, torch.Tensor, Any], coord: torch.Tensor | None = None):
+        x, target, _ = batch
         z = self.backbone(x)
         if self.latent_transform:
             z = self.latent_transform(z)
