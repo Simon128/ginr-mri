@@ -1,24 +1,19 @@
 from typing import TYPE_CHECKING
 import torch
 import os
-from torch.optim import Optimizer
-import torch.nn as nn
-from torch.utils.data import DataLoader, Dataset
 from torch.utils.tensorboard.writer import SummaryWriter
 import pathlib
 from datetime import datetime
 from monai.visualize.img2tensorboard import plot_2d_or_3d_image
 import torchvision
 
-from ..models import ModelOutput
-from ..metrics.inr_metrics import compute_psnr
 from .hook import Hook
 
 if TYPE_CHECKING:
     from ..engine import Engine
 
 class TensorboardHook(Hook):
-    def __init__(self, priority: int = 0, directory: str | None = None, visualization_freq: int = 100, visualization_slices: int = 10) -> None:
+    def __init__(self, priority: int = 0, directory: str | None = None) -> None:
         super().__init__(priority)
         if directory:
             self.directory = directory
@@ -26,22 +21,6 @@ class TensorboardHook(Hook):
             self.directory = os.path.join(pathlib.Path(__file__).parent.resolve(), "runs", datetime.now().isoformat())
         self.train_writer = SummaryWriter(log_dir=os.path.join(self.directory, "training"))
         self.val_writer = SummaryWriter(log_dir=os.path.join(self.directory, "validation"))
-        self.visualization_freq = visualization_freq
-
-    def pre_fit(
-        self, 
-        engine: 'Engine',
-        model: nn.Module,
-        train_dataset: Dataset, 
-        val_dataset: Dataset,
-        train_dataloader: DataLoader,
-        val_dataloader: DataLoader,
-        optimizer: Optimizer,
-        **kwargs
-    ) -> dict | None:
-        self.train_dataloader = train_dataloader
-        self.val_dataloader = val_dataloader
-        self.model = model
 
     def post_validation_epoch(
         self, 

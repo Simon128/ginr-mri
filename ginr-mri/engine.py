@@ -78,7 +78,6 @@ class Engine:
         train_size = len(trainloader) 
         val_step = math.floor(train_size / self.conf.validation_frequency)
         log_step = train_size // 10
-        val_step = 1
         model.train()
         epoch_timer = Timer()
         if self.conf.amp:

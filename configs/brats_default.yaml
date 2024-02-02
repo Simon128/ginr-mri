@@ -81,6 +81,10 @@ hooks:
       directory: /home/simon/tum/mri-runs/debug
       frequency: 1
       num_slices: 8
+  - hook: wandb
+    priority: 100
+    cfg:
+      project: debug
 engine:
   epochs: 10000
   batch_size: 2

@@ -42,7 +42,7 @@ def run_wrapper(
     if world_size > 1:
         setup(rank, world_size)
     conf = OmegaConf.load(args.config)
-    hooks = build_hooks(conf.hooks)
+    hooks = build_hooks(conf.hooks, conf)
     model = build_model(conf.model.name, conf.model).to(rank)
     if world_size > 1:
         model = DDP(model, device_ids=[rank])

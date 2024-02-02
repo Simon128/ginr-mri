@@ -1,1 +1,1 @@
-required: pyhton > 3.11
+required: pyhton >= 3.11
