@@ -56,19 +56,19 @@ class INRMetricsHook(Hook):
         **kwargs
     ) -> dict | None:
         loss = output.inr_out.loss
-        loss = loss.clone().detach().cpu().item()
+        loss = loss.clone().detach().cpu()
         if stage == "train":
             psnr = compute_psnr(output.inr_out.prediction, output.subsampled_targets)
             self.train_loss_dict_stack.setdefault("total_loss", [])
             self.train_loss_dict_stack["total_loss"].append(loss)
             self.train_metrics_stack.setdefault("psnr", [])
-            self.train_metrics_stack["psnr"].append(psnr.clone().detach().cpu().item())
+            self.train_metrics_stack["psnr"].append(psnr.clone().detach().cpu())
         elif stage == "val":
             psnr = compute_psnr(output.inr_out.prediction, output.subsampled_targets)
             self.val_loss_dict_stack.setdefault("total_loss", [])
             self.val_loss_dict_stack["total_loss"].append(loss)
             self.val_metrics_stack.setdefault("psnr", [])
-            self.val_metrics_stack["psnr"].append(psnr.clone().detach().cpu().item())
+            self.val_metrics_stack["psnr"].append(psnr.clone().detach().cpu())
 
     def post_validation_epoch(
         self, 
@@ -78,8 +78,8 @@ class INRMetricsHook(Hook):
     ) -> dict | None:
         return {
             "inr_metric": {
-                **{k: sum(v) / len(v) for k, v in self.val_loss_dict_stack.items()},
-                **{k: sum(v) / len(v) for k, v in self.val_metrics_stack.items()}
+                **{k: torch.mean(v) for k, v in self.val_loss_dict_stack.items()},
+                **{k: torch.mean(v) for k, v in self.val_metrics_stack.items()}
             }
         }
 
@@ -91,7 +91,7 @@ class INRMetricsHook(Hook):
     ) -> dict | None:
         return {
             "inr_metric": {
-                **{k: sum(v) / len(v) for k, v in self.train_loss_dict_stack.items()},
-                **{k: sum(v) / len(v) for k, v in self.train_metrics_stack.items()}
+                **{k: torch.mean(v) for k, v in self.train_loss_dict_stack.items()},
+                **{k: torch.mean(v) for k, v in self.train_metrics_stack.items()}
             }
         }
