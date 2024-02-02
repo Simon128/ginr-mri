@@ -4,6 +4,8 @@ import torch.nn as nn
 import torch
 from torch.utils.data import Dataset, DataLoader
 from torch.optim import Optimizer
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 from .hook import Hook
 from ..metrics.inr_metrics import compute_psnr
@@ -40,12 +42,15 @@ class VisualizationHook(Hook):
         epoch: int,
         **kwargs
     ) -> dict | None:
-        if epoch % self.frequency == 0:
+        if epoch % self.frequency == 0 and (dist.is_initialized() and dist.get_rank() == 0):
             batch = next(iter(self.val_dataloader))
             was_train = self.model.training
             self.model.eval()
             with torch.inference_mode():
-                prediction = self.model.full_prediction(batch).inr_out.prediction
+                if isinstance(self.model, DDP):
+                    prediction = self.model.module.full_prediction(batch).inr_out.prediction
+                else:
+                    prediction = self.model.full_prediction(batch).inr_out.prediction
             self.model.train(mode=was_train)
             psnr = compute_psnr(prediction, batch[1])
             # prediction shape:
@@ -118,12 +123,15 @@ class VisualizationHook(Hook):
         epoch: int,
         **kwargs
     ) -> dict | None:
-        if epoch % self.frequency == 0:
+        if epoch % self.frequency == 0 and (dist.is_initialized() and dist.get_rank() == 0):
             batch = next(iter(self.val_dataloader))
             was_train = self.model.training
             self.model.eval()
             with torch.inference_mode():
-                prediction = self.model.full_prediction(batch).inr_out.prediction
+                if isinstance(self.model, DDP):
+                    prediction = self.model.module.full_prediction(batch).inr_out.prediction
+                else:
+                    prediction = self.model.full_prediction(batch).inr_out.prediction
             self.model.train(mode=was_train)
             psnr = compute_psnr(prediction, batch[1])
             # prediction shape:
