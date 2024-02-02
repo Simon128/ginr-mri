@@ -13,7 +13,7 @@ from .models import build_model
 from .hooks import build_hooks
 from .optimizer import build_optimizer
 
-logging.basicConfig(level=logging.NOTSET)
+logging.basicConfig(level=logging.INFO)
 
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = 'localhost'
