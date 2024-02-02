@@ -60,10 +60,8 @@ if __name__ == "__main__":
     args = _parser.parse_args()
     world_size = len(args.ranks)
     if world_size > 1:
-        print(world_size)
-        print(args.ranks)
         mp.spawn(run_wrapper, # type:ignore
-             args=(args,),
+             args=(world_size, args),
              nprocs=world_size,
              join=True
         )
