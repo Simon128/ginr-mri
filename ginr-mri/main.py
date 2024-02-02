@@ -58,8 +58,11 @@ def run_wrapper(
 if __name__ == "__main__":
     _parser = parser()
     args = _parser.parse_args()
+    print(args.ranks)
     world_size = len(args.ranks)
     if world_size > 1:
+        print(world_size)
+        print(args.ranks)
         mp.spawn(run_wrapper, # type:ignore
              args=(args),
              nprocs=world_size,
