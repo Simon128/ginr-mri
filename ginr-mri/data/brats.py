@@ -112,6 +112,12 @@ class BraTS(Dataset):
         else:
             raise ValueError(f"{opt} not supported")
 
+    def _load(self, path):
+        t = torch.tensor(nib.load(path).get_fdata(), device=self.device, dtype=torch.float32) # type:ignore
+        # normalize 
+        t = (t - torch.min(t)) * 2 / (torch.max(t) - torch.min(t)) - 1
+        return t
+
     def _prepare_item_stack(self, item):
         input_list = []
         output_list = []
@@ -119,11 +125,7 @@ class BraTS(Dataset):
 
         for opt in self.use_patterns:
             if opt == BraTSScanTypes.NA: continue
-            path = item[opt]
-            t = torch.tensor(nib.load(path).get_fdata(), device=self.device, dtype=torch.float32) # type:ignore
-            # normalize 
-            t = (t - torch.min(t)) * 2 / (torch.max(t) - torch.min(t)) - 1
-            useable[opt] = t
+            useable[opt] = self._load(item[opt])
 
         for opt in self.input_options:
             if opt == BraTSScanTypes.NA: continue
@@ -147,11 +149,7 @@ class BraTS(Dataset):
         input_list = []
 
         for opt in self.input_options:
-            path = item[opt]
-            t = torch.tensor(nib.load(path).get_fdata(), device=self.device, dtype=torch.float32) # type:ignore
-            # normalize 
-            t = (t - torch.min(t)) * 2 / (torch.max(t) - torch.min(t)) - 1
-            input_list.append(t)
+            input_list.append(self._load(item[opt]))
 
         target_idx = random.randrange(0, len(input_list))
         target = torch.tensor(input_list.pop(target_idx))

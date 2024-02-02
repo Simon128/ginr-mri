@@ -70,12 +70,17 @@ hooks:
     priority: 100
     cfg:
       directory: /home/simon/tum/mri-runs/debug
-      batch_log_freq: 10
   - hook: lr_scheduler
     priority: 100
     cfg:
       scheduler_name: StepLR
       step_size: 1000
+  - hook: visualization
+    priority: 1
+    cfg:
+      directory: /home/simon/tum/mri-runs/debug
+      frequency: 1
+      num_slices: 8
 engine:
   epochs: 10000
   batch_size: 2

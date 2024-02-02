@@ -1,3 +1,6 @@
 nibabel
 omegaconf
 tensorboard
+scikit-learn
+tensorboard-plugin-3d
+monai

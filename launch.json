@@ -7,7 +7,7 @@
       "console": "integratedTerminal",
       "request": "launch",
       "module": "ginr-mri.main",
-      "justMyCode": true,
+      "justMyCode": false,
       "args": [
         "train",
         "/home/simon/tum/ginr-mri/configs/brats_default.yaml",

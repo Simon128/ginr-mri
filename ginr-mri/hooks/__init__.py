@@ -6,6 +6,8 @@ from .hook import Hook
 from .lr_scheduler_hook import LRSchedulerHook
 from .model_checkpoint_hook import ModelCheckpointHook
 from .tensorboard_hook import TensorboardHook
+from .inr_metrics_hook import INRMetricsHook
+from .visualization_hook import VisualizationHook
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +16,8 @@ class HooksEnum(enum.StrEnum):
     model_checkpoint = "model_checkpoint"
     tensorboard_hook = "tensorboard"
     lr_scheduler = "lr_scheduler"
+    inr_metrics = "inr_metrics"
+    visualization = "visualization"
 
 @dataclass
 class HookCFG:
@@ -22,18 +26,17 @@ class HookCFG:
     cfg: dict
 
 def build_hook(cfg: HookCFG) -> Hook:
-    if HooksEnum(cfg.hook) == HooksEnum.early_stop:
-        return Hook(cfg.priority)
-    elif HooksEnum(cfg.hook) == HooksEnum.model_checkpoint:
-        return ModelCheckpointHook(cfg.priority, **cfg.cfg)
-    elif HooksEnum(cfg.hook) == HooksEnum.tensorboard_hook:
-        return TensorboardHook(cfg.priority, **cfg.cfg)
-    elif HooksEnum(cfg.hook) == HooksEnum.lr_scheduler:
-        return LRSchedulerHook(cfg.priority, **cfg.cfg)
-    else:
-        err_msg = f"hook {cfg.hook} not supported"
-        logger.error(err_msg)
-        raise ValueError(err_msg)
+    match HooksEnum(cfg.hook):
+        case HooksEnum.early_stop: return Hook(cfg.priority)
+        case HooksEnum.model_checkpoint: return ModelCheckpointHook(cfg.priority, **cfg.cfg)
+        case HooksEnum.tensorboard_hook: return TensorboardHook(cfg.priority, **cfg.cfg)
+        case HooksEnum.lr_scheduler: return LRSchedulerHook(cfg.priority, **cfg.cfg)
+        case HooksEnum.inr_metrics: return INRMetricsHook(cfg.priority, **cfg.cfg)
+        case HooksEnum.visualization: return VisualizationHook(cfg.priority, **cfg.cfg)
+        case _:
+            err_msg = f"hook {cfg.hook} not supported"
+            logger.error(err_msg)
+            raise ValueError(err_msg)
 
 def build_hooks(cfgs: list[HookCFG]):
     hooks = []
