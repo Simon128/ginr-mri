@@ -56,19 +56,19 @@ class INRMetricsHook(Hook):
         **kwargs
     ) -> dict | None:
         loss = output.inr_out.loss
-        loss = loss.clone().detach().cpu()
+        loss = loss.clone().detach()
         if stage == "train":
             psnr = compute_psnr(output.inr_out.prediction, output.subsampled_targets)
             self.train_loss_dict_stack.setdefault("total_loss", [])
             self.train_loss_dict_stack["total_loss"].append(loss)
             self.train_metrics_stack.setdefault("psnr", [])
-            self.train_metrics_stack["psnr"].append(psnr.clone().detach().cpu())
+            self.train_metrics_stack["psnr"].append(psnr.clone().detach())
         elif stage == "val":
             psnr = compute_psnr(output.inr_out.prediction, output.subsampled_targets)
             self.val_loss_dict_stack.setdefault("total_loss", [])
             self.val_loss_dict_stack["total_loss"].append(loss)
             self.val_metrics_stack.setdefault("psnr", [])
-            self.val_metrics_stack["psnr"].append(psnr.clone().detach().cpu())
+            self.val_metrics_stack["psnr"].append(psnr.clone().detach())
 
     def post_validation_epoch(
         self, 
