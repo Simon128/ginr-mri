@@ -54,8 +54,7 @@ class Engine:
                 dataset=dataset, # type:ignore
                 sampler=trainsampler,
                 batch_size=self.conf.batch_size if batch_size is None else batch_size,
-                num_workers=4,
-                pin_memory=True
+                num_workers=4
             )
         else:
             dataloader = DataLoader(
