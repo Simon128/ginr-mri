@@ -116,6 +116,8 @@ class VisualizationHook(Hook):
                     "slices_coronal": (coronal_pred, coronal_target)
                 }
             }
+    if dist.is_initialized():
+        dist.barrier()
 
     def post_training_epoch(
         self, 
@@ -197,3 +199,5 @@ class VisualizationHook(Hook):
                     "slices_coronal": (coronal_pred, coronal_target)
                 }
             }
+    if dist.is_initialized():
+        dist.barrier()
