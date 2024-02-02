@@ -2,7 +2,7 @@ from .brats import BraTS, BraTSDataPrepConfig
 from ..transforms import build_transform
 from torchvision.transforms.v2 import Compose
 
-def build_data(name: str, config, device):
+def build_data(name: str, config):
     if hasattr(config, "source_transforms"):
         src_transform = Compose([build_transform(t.name, t.args) for t in config.source_transforms])
     else:
@@ -13,8 +13,8 @@ def build_data(name: str, config, device):
         trgt_transform = None
     if name == "brats":
         data_prep_config = BraTSDataPrepConfig.create(config.data_prep)
-        train_ds = BraTS(data_prep_config, "train", src_transform, trgt_transform, device)
-        val_ds = BraTS(data_prep_config, "val", src_transform, trgt_transform, device)
+        train_ds = BraTS(data_prep_config, "train", src_transform, trgt_transform)
+        val_ds = BraTS(data_prep_config, "val", src_transform, trgt_transform)
         return train_ds, val_ds
     else:
         raise ValueError(f"dataset {name} not supported")

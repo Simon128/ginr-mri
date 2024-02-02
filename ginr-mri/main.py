@@ -49,7 +49,7 @@ def run_wrapper(
         model = DDP(model, device_ids=[rank])
     engine = Engine(conf.engine, hooks)
     if args.mode == "train":
-        train_ds, val_ds = build_data(conf.data.name, conf.data, rank)
+        train_ds, val_ds = build_data(conf.data.name, conf.data)
         optimizer = build_optimizer(model, conf.optimizer)
         engine.fit(model, train_ds, val_ds, optimizer)
     if world_size > 1:
