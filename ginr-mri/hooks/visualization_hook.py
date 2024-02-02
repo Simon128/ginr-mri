@@ -106,6 +106,9 @@ class VisualizationHook(Hook):
                     file_name = os.path.join(sub_dir, f"target_epoch_{epoch}_channel_{c}.nii")
                     save_tensor_as_nifti(batch[1][0][c], file_name)
 
+        if dist.is_initialized():
+            dist.barrier()
+        if epoch % self.frequency == 0 and (dist.is_initialized() and dist.get_rank() == 0):
             return {
                 "visualization": {
                     "pred_psnr": psnr,
@@ -189,6 +192,9 @@ class VisualizationHook(Hook):
                     file_name = os.path.join(sub_dir, f"target_epoch_{epoch}_channel_{c}.nii")
                     save_tensor_as_nifti(batch[1][0][c], file_name)
 
+        if dist.is_initialized():
+            dist.barrier()
+        if epoch % self.frequency == 0 and (dist.is_initialized() and dist.get_rank() == 0):
             return {
                 "visualization": {
                     "pred_psnr": psnr,
