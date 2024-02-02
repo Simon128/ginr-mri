@@ -78,8 +78,8 @@ class INRMetricsHook(Hook):
     ) -> dict | None:
         return {
             "inr_metric": {
-                **{k: torch.mean(v) for k, v in self.val_loss_dict_stack.items()},
-                **{k: torch.mean(v) for k, v in self.val_metrics_stack.items()}
+                **{k: torch.mean(torch.stack(v)) for k, v in self.val_loss_dict_stack.items()},
+                **{k: torch.mean(torch.stack(v)) for k, v in self.val_metrics_stack.items()}
             }
         }
 
@@ -91,7 +91,7 @@ class INRMetricsHook(Hook):
     ) -> dict | None:
         return {
             "inr_metric": {
-                **{k: torch.mean(v) for k, v in self.train_loss_dict_stack.items()},
-                **{k: torch.mean(v) for k, v in self.train_metrics_stack.items()}
+                **{k: torch.mean(torch.stack(v)) for k, v in self.train_loss_dict_stack.items()},
+                **{k: torch.mean(torch.stack(v)) for k, v in self.train_metrics_stack.items()}
             }
         }
