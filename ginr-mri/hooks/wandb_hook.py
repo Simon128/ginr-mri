@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class WandbHook(Hook):
     def __init__(self, priority: int = 0, full_cfg = None, project="NA", name: str | None = None) -> None:
         super().__init__(priority)
-        if rank0only:
+        if rank0only():
             wandb.init(
                 project=project,
                 config=omegaconf.OmegaConf.to_container(full_cfg, resolve=True),
