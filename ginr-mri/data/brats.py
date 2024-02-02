@@ -70,12 +70,10 @@ class BraTS(Dataset):
             data_prep_cfg : BraTSDataPrepConfig = BraTSDataPrepConfig(),
             split="train", 
             src_transform=None,
-            trgt_transform=None,
-            device="cpu"
+            trgt_transform=None
         ) -> None:
         super().__init__()
         assert split in ["train", "val"]
-        self.device = device
         self.src_transform = src_transform
         self.trgt_transform = trgt_transform
         self.split = split
@@ -127,7 +125,7 @@ class BraTS(Dataset):
             raise ValueError(f"{opt} not supported")
 
     def _load(self, path):
-        t = torch.tensor(nib.load(path).get_fdata(), device=self.device, dtype=torch.float32) # type:ignore
+        t = torch.tensor(nib.load(path).get_fdata(),  dtype=torch.float32) # type:ignore
         # normalize 
         t = (t - torch.min(t)) * 2 / (torch.max(t) - torch.min(t)) - 1
         return t

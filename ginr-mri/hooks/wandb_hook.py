@@ -42,7 +42,7 @@ class WandbHook(Hook):
         if backbone_metrics is not None:
             for k, v in backbone_metrics.items():
                 if dist.is_initialized():
-                    tensor = torch.zeros(dist.get_world_size(), device=dist.get_rank())
+                    tensor = torch.zeros(dist.get_world_size(), dtype=torch.float, device=dist.get_rank())
                     dist.all_gather_into_tensor(tensor, v)
                     wandb_logs[f"train/backbone/{k}"] = torch.mean(tensor)
                 wandb_logs[f"train/backbone/{k}"] = v
@@ -50,7 +50,7 @@ class WandbHook(Hook):
         if latent_transformation_metrics is not None:
             for k, v in latent_transformation_metrics.items():
                 if dist.is_initialized():
-                    tensor = torch.zeros(dist.get_world_size(), device=dist.get_rank())
+                    tensor = torch.zeros(dist.get_world_size(), dtype=torch.float, device=dist.get_rank())
                     dist.all_gather_into_tensor(tensor, v)
                     wandb_logs[f"train/latent_transformation/{k}"] = torch.mean(tensor)
                 wandb_logs[f"train/latent_transformation/{k}"] = v
@@ -93,7 +93,7 @@ class WandbHook(Hook):
         if inr_metrics is not None:
             for k, v in inr_metrics.items():
                 if dist.is_initialized():
-                    tensor = torch.zeros(dist.get_world_size(), device=dist.get_rank())
+                    tensor = torch.zeros(dist.get_world_size(), dtype=torch.float, device=dist.get_rank())
                     dist.all_gather_into_tensor(tensor, v)
                     wandb_logs[f"train/inr/{k}"] = torch.mean(tensor)
                 else:
@@ -102,7 +102,7 @@ class WandbHook(Hook):
         if backbone_metrics is not None:
             for k, v in backbone_metrics.items():
                 if dist.is_initialized():
-                    tensor = torch.zeros(dist.get_world_size(), device=dist.get_rank())
+                    tensor = torch.zeros(dist.get_world_size(), dtype=torch.float, device=dist.get_rank())
                     dist.all_gather_into_tensor(tensor, v)
                     wandb_logs[f"train/backbone/{k}"] = torch.mean(tensor)
                 wandb_logs[f"train/backbone/{k}"] = v
@@ -110,7 +110,7 @@ class WandbHook(Hook):
         if latent_transformation_metrics is not None:
             for k, v in latent_transformation_metrics.items():
                 if dist.is_initialized():
-                    tensor = torch.zeros(dist.get_world_size(), device=dist.get_rank())
+                    tensor = torch.zeros(dist.get_world_size(), dtype=torch.float, device=dist.get_rank())
                     dist.all_gather_into_tensor(tensor, v)
                     wandb_logs[f"train/latent_transformation/{k}"] = torch.mean(tensor)
                 wandb_logs[f"train/latent_transformation/{k}"] = v

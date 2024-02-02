@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from omegaconf import OmegaConf, MISSING
 from typing import Any
 import logging
+import torch.distributed as dist
 
 from .backbones import build_backbone
 from .inr import build_inr
@@ -45,6 +46,12 @@ class BaseModel(nn.Module):
 
     def full_prediction(self, batch: tuple[torch.Tensor, torch.Tensor, Any], verbose = False):
         x, target, _ = batch
+        if dist.is_initialized():
+            x = x.to(dist.get_rank())
+            target = target.to(dist.get_rank())
+        else:
+            x = x.to("cuda")
+            target = target.to("cuda")
         z = self.backbone(x)
         if self.latent_transform:
             z = self.latent_transform(z)
@@ -97,6 +104,12 @@ class BaseModel(nn.Module):
 
     def forward(self, batch: tuple[torch.Tensor, torch.Tensor, Any], coord: torch.Tensor | None = None):
         x, target, _ = batch
+        if dist.is_initialized():
+            x = x.to(dist.get_rank())
+            target = target.to(dist.get_rank())
+        else:
+            x = x.to("cuda")
+            target = target.to("cuda")
         z = self.backbone(x)
         if self.latent_transform:
             z = self.latent_transform(z)
