@@ -77,6 +77,7 @@ class Engine:
         train_size = len(trainloader) 
         val_step = math.floor(train_size / self.conf.validation_frequency)
         log_step = train_size // 10
+        log_step = 1 if log_step == 0 else log_step
         model.train()
         epoch_timer = Timer()
         if self.conf.amp:
@@ -132,6 +133,7 @@ class Engine:
         val_size = len(valloader)
         val_iter = iter(valloader)
         log_step = val_size // 10
+        log_step = 1 if log_step == 0 else log_step
         val_timer = Timer()
         model.eval()
         val_loss = 0
