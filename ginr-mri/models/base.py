@@ -46,12 +46,6 @@ class BaseModel(nn.Module):
 
     def full_prediction(self, batch: tuple[torch.Tensor, torch.Tensor, Any], verbose = False):
         x, target, _ = batch
-        if dist.is_initialized():
-            x = x.to(dist.get_rank())
-            target = target.to(dist.get_rank())
-        else:
-            x = x.to("cuda")
-            target = target.to("cuda")
         z = self.backbone(x)
         if self.latent_transform:
             z = self.latent_transform(z)
