@@ -73,11 +73,6 @@ hooks:
       directory: /home/simon/tum/mri-runs/debug
       frequency: 100
       num_slices: 8
-  - hook: wandb
-    priority: 100
-    cfg:
-      project: ginr-mri
-      name: baseline_t1
   - hook: inr_metrics
     priority: 1
 engine:

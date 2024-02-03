@@ -42,7 +42,7 @@ class VisualizationHook(Hook):
         epoch: int,
         **kwargs
     ) -> dict | None:
-        if epoch % self.frequency == 0 and (dist.is_initialized() and dist.get_rank() == 0):
+        if epoch % self.frequency == 0 and (not dist.is_initialized() or dist.is_initialized() and dist.get_rank() == 0):
             batch = next(iter(self.val_dataloader))
             was_train = self.model.training
             self.model.eval()
@@ -108,7 +108,7 @@ class VisualizationHook(Hook):
 
         if dist.is_initialized():
             dist.barrier()
-        if epoch % self.frequency == 0 and (dist.is_initialized() and dist.get_rank() == 0):
+        if epoch % self.frequency == 0 and (not dist.is_initialized() or dist.is_initialized() and dist.get_rank() == 0):
             return {
                 "visualization": {
                     "pred_psnr": psnr,
@@ -119,8 +119,6 @@ class VisualizationHook(Hook):
                     "slices_coronal": (coronal_pred, coronal_target)
                 }
             }
-    if dist.is_initialized():
-        dist.barrier()
 
     def post_training_epoch(
         self, 
@@ -128,7 +126,7 @@ class VisualizationHook(Hook):
         epoch: int,
         **kwargs
     ) -> dict | None:
-        if epoch % self.frequency == 0 and (dist.is_initialized() and dist.get_rank() == 0):
+        if epoch % self.frequency == 0 and (not dist.is_initialized() or dist.is_initialized() and dist.get_rank() == 0):
             batch = next(iter(self.val_dataloader))
             was_train = self.model.training
             self.model.eval()
@@ -194,7 +192,7 @@ class VisualizationHook(Hook):
 
         if dist.is_initialized():
             dist.barrier()
-        if epoch % self.frequency == 0 and (dist.is_initialized() and dist.get_rank() == 0):
+        if epoch % self.frequency == 0 and (not dist.is_initialized() or dist.is_initialized() and dist.get_rank() == 0):
             return {
                 "visualization": {
                     "pred_psnr": psnr,
