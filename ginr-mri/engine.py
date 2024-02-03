@@ -103,14 +103,14 @@ class Engine:
                 batch = next(train_iter)
                 self.run_hooks("pre_model_step", engine=self, iteration_step=it, epoch=e + self.resume_epoch, batch=batch, stage="train")
 
-                x, target, _ = batch
+                x, target, z = batch
                 if dist.is_initialized():
                     x = x.to(dist.get_rank())
                     target = target.to(dist.get_rank())
                 else:
                     x = x.to("cuda")
                     target = target.to("cuda")
-                batch = (x, target, batch[3])
+                batch = (x, target, z)
                 if self.conf.amp:
                     with torch.cuda.amp.autocast_mode.autocast():
                         output = model(batch)
@@ -152,14 +152,14 @@ class Engine:
                     logger.info(f"Validating {it}/{val_size} in epoch {epoch} on rank {self.rank} -- elapsed {val_timer.get_elapsed()} -- eta: {val_timer.get_eta(val_size - it)}")
                 batch = next(val_iter)
                 self.run_hooks("pre_model_step", engine=self, iteration_step=it, epoch=epoch, batch=batch, stage="val")
-                x, target, _ = batch
+                x, target, z = batch
                 if dist.is_initialized():
                     x = x.to(dist.get_rank())
                     target = target.to(dist.get_rank())
                 else:
                     x = x.to("cuda")
                     target = target.to("cuda")
-                batch = (x, target, batch[3])
+                batch = (x, target, z)
                 output = model(batch)
                 val_loss += output.loss.item()
                 self.run_hooks("post_model_step", engine=self, iteration_step=it, epoch=epoch, output=output, stage="val")
