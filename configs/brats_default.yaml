@@ -24,6 +24,22 @@ model:
   latent_transform:
     name: convolutional
     levels:
+      - n_layer: 3
+        strides: [2, 2, 1]
+        padding: [1, 1, "same"]
+        channels: [64, 128, 256]
+        kernel_size: [3, 3, 1]
+        backbone_idx: 2
+        input_channels: 64
+        batch_norm: true
+      - n_layer: 2
+        strides: [2, 1]
+        padding: [1, "same"]
+        channels: [128, 256]
+        kernel_size: [3, 1]
+        backbone_idx: 3
+        input_channels: 128
+        batch_norm: true
       - n_layer: 1
         strides: [1]
         padding: ["same"]
@@ -35,17 +51,19 @@ model:
   inr:
     name: weight_modulated_inr
     n_layer: 5
-    hidden_dim: [256, 256, 256, 256] # needs to coincide with backbone embedding channels
+    hidden_dim: [1024, 1024, 1024, 1024] # needs to coincide with backbone embedding channels
     use_bias: true
     input_dim: 3
     output_dim: 1
-    ff_sigma: 120
+    ff_sigma: 8
     ff_dim: 120
     normalize_weights: True
-    modulated_layers: [1]
-    backbone_spatial_feature_dimensions: [7680]
+    modulated_layers: [1, 2, 3]
+    backbone_spatial_feature_dimensions: [7680, 7680, 7680]
     modulated_layers_to_backbone_features_map:
       1: 0
+      2: 1
+      3: 2
   coord_sampler:
     coord_range: [-1.0, 1.0]
   subsampler:
