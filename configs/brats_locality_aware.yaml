@@ -76,6 +76,6 @@ hooks:
     priority: 1
 engine:
   epochs: 10000
-  batch_size: 1
+  batch_size: 2
   amp: false
   validation_frequency: 1.0

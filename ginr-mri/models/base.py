@@ -107,8 +107,6 @@ class BaseModel(nn.Module):
         z = self.backbone(x)
         if self.latent_transform:
             z = self.latent_transform(z)
-
-        target = target.squeeze(2)
         if not coord:
             coord = self.sample_coord_input(target)
 
