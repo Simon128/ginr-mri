@@ -67,7 +67,7 @@ class Engine:
 
     def fit(self, model, train_dataset, val_dataset, optimizer):
         torch.backends.cudnn.benchmark = True
-        trainloader = self.get_dataloader(train_dataset, shuffle=True)
+        trainloader = self.get_dataloader(train_dataset, shuffle=False)
         valloader = self.get_dataloader(val_dataset, shuffle=False)
         self.run_hooks(
             "pre_fit", engine=self, model=model, 
@@ -79,6 +79,7 @@ class Engine:
         val_step = math.floor(train_size / self.conf.validation_frequency)
         log_step = train_size // 10
         log_step = 1 if log_step == 0 else log_step
+        train_size = 1
         model.train()
         epoch_timer = Timer()
         if self.conf.amp:

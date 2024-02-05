@@ -127,7 +127,7 @@ class BraTS(Dataset):
     def _load(self, path):
         t = torch.tensor(nib.load(path).get_fdata(),  dtype=torch.float32) # type:ignore
         # normalize 
-        t = (t - torch.min(t)) * 2 / (torch.max(t) - torch.min(t)) - 1
+        t = (t - torch.min(t)) / (torch.max(t) - torch.min(t))
         return t
 
     def _prepare_item_stack(self, item):

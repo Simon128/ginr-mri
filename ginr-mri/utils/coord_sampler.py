@@ -42,10 +42,6 @@ class CoordSampler(nn.Module):
         coord_range = self.coord_range if coord_range is None else coord_range
         min_value, max_value = coord_range
 
-        if xs.ndim == 4:
-            xs = xs.unsqueeze(0)
-        else:
-            assert xs.ndim == 5
         batch_size, spatial_shape = xs.shape[0], xs.shape[2:]
 
         return shape2coordinate(spatial_shape, batch_size, min_value, max_value, upsample_ratio, device)

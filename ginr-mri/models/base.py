@@ -107,11 +107,15 @@ class BaseModel(nn.Module):
         z = self.backbone(x)
         if self.latent_transform:
             z = self.latent_transform(z)
+
+        target = target.squeeze(2)
         if not coord:
             coord = self.sample_coord_input(target)
+
         subsample_coord_idxs = self.subsampler.subsample_coords_idx(target)
         coord = self.subsampler.subsample_coords(coord, subsample_coord_idxs)
         target = self.subsampler.subsample_xs(target, subsample_coord_idxs)
+
         inr_output = self.inr(coord, z, target)
         output = ModelOutput(
             loss=inr_output.loss,

@@ -172,30 +172,36 @@ class VisualizationHook(Hook):
             # saggital
             dim_size = prediction.shape[-3]
             slice_step = dim_size // self.num_slices
-            for idx in range(0, dim_size, slice_step):
-                saggital_pred.append(torch.rot90(prediction.select(-3, idx), dims=[-2, -1]))
-                saggital_target.append(torch.rot90(batch[1].select(-3, idx), dims=[-2, -1]))
+            if slice_step > 0:
+                for idx in range(0, dim_size, slice_step):
+                    saggital_pred.append(torch.rot90(prediction.select(-3, idx), dims=[-2, -1]))
+                    saggital_target.append(torch.rot90(batch[1].select(-3, idx), dims=[-2, -1]))
 
             # axial
             dim_size = prediction.shape[-1]
             slice_step = dim_size // self.num_slices
-            for idx in range(0, dim_size, slice_step):
-                axial_pred.append(torch.rot90(prediction.select(-1, idx), dims=[-2, -1]))
-                axial_target.append(torch.rot90(batch[1].select(-1, idx), dims=[-2, -1]))
+            if slice_step > 0:
+                for idx in range(0, dim_size, slice_step):
+                    axial_pred.append(torch.rot90(prediction.select(-1, idx), dims=[-2, -1]))
+                    axial_target.append(torch.rot90(batch[1].select(-1, idx), dims=[-2, -1]))
 
             # coronal
             dim_size = prediction.shape[-2]
             slice_step = dim_size // self.num_slices
-            for idx in range(0, dim_size, slice_step):
-                coronal_pred.append(torch.rot90(prediction.select(-2, idx), dims=[-2, -1]))
-                coronal_target.append(torch.rot90(batch[1].select(-2, idx), dims=[-2, -1]))
+            if slice_step > 0:
+                for idx in range(0, dim_size, slice_step):
+                    coronal_pred.append(torch.rot90(prediction.select(-2, idx), dims=[-2, -1]))
+                    coronal_target.append(torch.rot90(batch[1].select(-2, idx), dims=[-2, -1]))
 
-            saggital_pred = torch.stack(saggital_pred, dim=1)
-            saggital_target = torch.stack(saggital_target, dim=1)
-            axial_pred = torch.stack(axial_pred, dim=1)
-            axial_target = torch.stack(axial_target, dim=1)
-            coronal_pred = torch.stack(coronal_pred, dim=1)
-            coronal_target = torch.stack(coronal_target, dim=1)
+            if len(saggital_pred) > 0:
+                saggital_pred = torch.stack(saggital_pred, dim=1)
+                saggital_target = torch.stack(saggital_target, dim=1)
+            if len(axial_pred) > 0:
+                axial_pred = torch.stack(axial_pred, dim=1)
+                axial_target = torch.stack(axial_target, dim=1)
+            if len(coronal_pred) > 0:
+                coronal_pred = torch.stack(coronal_pred, dim=1)
+                coronal_target = torch.stack(coronal_target, dim=1)
 
             if self.directory is not None:
                 sub_dir = os.path.join(self.directory, "training", "examples")

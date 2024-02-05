@@ -7,10 +7,10 @@
       "console": "integratedTerminal",
       "request": "launch",
       "module": "ginr-mri.main",
-      "justMyCode": false,
+      "justMyCode": true,
       "args": [
         "train",
-        "/home/simon/tum/ginr-mri/configs/brats_default.yaml",
+        "/home/simon/tum/ginr-mri/configs/brats_locality_aware.yaml",
         "--ranks",
         "0"
       ]

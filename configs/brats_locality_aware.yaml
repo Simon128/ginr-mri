@@ -33,24 +33,23 @@ model:
         input_channels: 256
         batch_norm: true
   inr:
-    name: weight_modulated_inr
+    name: locality_aware_inr
     n_layer: 5
     hidden_dim: [256, 256, 256, 256] # needs to coincide with backbone embedding channels
     use_bias: true
     input_dim: 3
+    attentive_embedding: 256
+    attention_heads: 8
+    attention_on_backbone_idx: [0]
+    backbone_spatial_feature_dimensions: [7680]
     output_dim: 1
     ff_sigma: 8
     ff_dim: 120
-    normalize_weights: True
-    modulated_layers: []
-    backbone_spatial_feature_dimensions: []
-    modulated_layers_to_backbone_features_map:
-      1: 0
   coord_sampler:
     coord_range: [-1.0, 1.0]
   subsampler:
     type: random
-    ratio: 0.1
+    ratio: 0.001
 optimizer:
   type: adam
   init_lr: 0.0001
@@ -61,12 +60,12 @@ hooks:
   - hook: tensorboard
     priority: 100
     cfg:
-      directory: /home/simon/tum/mri-runs/debug
+      directory: /home/simon/tum/mri-runs/attentive-inr2
   - hook: lr_scheduler
     priority: 100
     cfg:
       scheduler_name: StepLR
-      step_size: 1000
+      step_size: 500
   - hook: visualization
     priority: 1
     cfg:
