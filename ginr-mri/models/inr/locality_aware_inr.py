@@ -62,43 +62,30 @@ class LocalityAwareINR(nn.Module):
         super().__init__()
         self.config = config
 
-        self.locality_fourier = FourierLinear(bandwidth=2, ff_dim=240, inr_channels=256, coord_dim=3)
+        self.locality_fourier = FourierLinear(bandwidth=128, ff_dim=240, inr_channels=256, coord_dim=2)
         self.locality_attention = nn.MultiheadAttention(
             self.config.attentive_embedding,
             num_heads=config.attention_heads,
             batch_first=True
         )
-        self.inr_fourier_1 = FourierLinear(bandwidth=16, ff_dim=240, inr_channels=256, coord_dim=3)
+        self.query_proj = nn.Linear(256, 256)
+        self.key_proj = nn.Linear(256, 256)
+        self.value_proj = nn.Linear(256, 256)
+        self.inr_fourier_1 = FourierLinear(bandwidth=256, ff_dim=240, inr_channels=256, coord_dim=2)
         self.band_1_in = nn.Linear(256, 256)
         self.band_1_out = nn.Sequential(
             nn.Linear(256, 256),
             nn.ReLU()
         )
-        self.inr_fourier_2 = FourierLinear(bandwidth=8, ff_dim=240, inr_channels=256, coord_dim=3)
+        self.inr_fourier_2 = FourierLinear(bandwidth=128, ff_dim=240, inr_channels=256, coord_dim=2)
         self.band_2_in = nn.Linear(256, 256)
         self.band_2_out = nn.Sequential(
             nn.Linear(256, 256),
             nn.ReLU()
         )
 
-        self.inr_fourier_3 = FourierLinear(bandwidth=4, ff_dim=240, inr_channels=256, coord_dim=3)
-        self.band_3_in = nn.Linear(256, 256)
-        self.band_3_out = nn.Sequential(
-            nn.Linear(256, 256),
-            nn.ReLU()
-        )
-
-        self.inr_fourier_4 = FourierLinear(bandwidth=2, ff_dim=240, inr_channels=256, coord_dim=3)
-        self.band_4_in = nn.Linear(256, 256)
-        self.band_4_out = nn.Sequential(
-            nn.Linear(256, 256),
-            nn.ReLU()
-        )
-
         self.final_band1 = nn.Linear(256, 1)
         self.final_band2 = nn.Linear(256, 1)
-        self.final_band3 = nn.Linear(256, 1)
-        self.final_band4 = nn.Linear(256, 1)
 
     def compute_loss(self, preds, targets, reduction="mean"):
         assert reduction in ["mean", "sum", "none"]
@@ -115,10 +102,9 @@ class LocalityAwareINR(nn.Module):
         return total_loss
 
     def forward(self, coord: torch.Tensor, features: list[torch.Tensor], target: torch.Tensor | None = None):
-        batch_size = coord.shape[0]
         z = self.locality_fourier(coord)
-        _f = features[-1].permute((0, 2, 3, 4, 1)).view(batch_size, -1, self.config.attentive_embedding)
-        z = self.locality_attention(z, _f, _f)[0]
+        _f = features[-1].flatten(start_dim=2).permute((0, 2, 1))
+        z = self.locality_attention(self.query_proj(z), self.key_proj(_f), self.value_proj(_f))[0]
 
         int_band1 = self.band_1_in(z)
         int_band1 = int_band1 + self.inr_fourier_1(coord)
@@ -129,18 +115,8 @@ class LocalityAwareINR(nn.Module):
         int_band2 = int_band2 + band1
         band2 = self.band_2_out(F.relu(int_band2))
 
-        int_band3 = self.band_3_in(z)
-        int_band3 = F.relu(int_band3 + self.inr_fourier_3(coord))
-        int_band3 = int_band3 + band2 + band1
-        band3 = self.band_3_out(F.relu(int_band3))
-        
-        int_band4 = self.band_4_in(z)
-        int_band4 = F.relu(int_band4 + self.inr_fourier_4(coord))
-        int_band4 = int_band4 + band3 + band2 + band1
-        band4 = self.band_4_out(F.relu(int_band4))
-
-        _out = self.final_band4(band4) + self.final_band3(band3) + self.final_band2(band2) + self.final_band1(band1)
-        _out = F.relu(_out)
+        _out = self.final_band2(band2) + self.final_band1(band1)
+        _out = F.sigmoid(_out)
 
         output = INROutput(prediction=_out)
 

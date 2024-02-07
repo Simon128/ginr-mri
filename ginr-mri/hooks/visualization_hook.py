@@ -135,7 +135,7 @@ class VisualizationHook(Hook):
         **kwargs
     ) -> dict | None:
         if epoch % self.frequency == 0 and (not dist.is_initialized() or dist.is_initialized() and dist.get_rank() == 0):
-            batch = next(iter(self.val_dataloader))
+            batch = next(iter(self.train_dataloader))
             x, target, z = batch
             if dist.is_initialized():
                 x = x.to(dist.get_rank())
@@ -171,27 +171,30 @@ class VisualizationHook(Hook):
             
             # saggital
             dim_size = prediction.shape[-3]
-            slice_step = dim_size // self.num_slices
-            if slice_step > 0:
-                for idx in range(0, dim_size, slice_step):
-                    saggital_pred.append(torch.rot90(prediction.select(-3, idx), dims=[-2, -1]))
-                    saggital_target.append(torch.rot90(batch[1].select(-3, idx), dims=[-2, -1]))
+            slice_step = dim_size // self.num_slices 
+            if slice_step == 0:
+                slice_step = 1
+            for idx in range(0, dim_size, slice_step):
+                saggital_pred.append(torch.rot90(prediction.select(-3, idx), dims=[-2, -1]))
+                saggital_target.append(torch.rot90(batch[1].select(-3, idx), dims=[-2, -1]))
 
             # axial
             dim_size = prediction.shape[-1]
             slice_step = dim_size // self.num_slices
-            if slice_step > 0:
-                for idx in range(0, dim_size, slice_step):
-                    axial_pred.append(torch.rot90(prediction.select(-1, idx), dims=[-2, -1]))
-                    axial_target.append(torch.rot90(batch[1].select(-1, idx), dims=[-2, -1]))
+            if slice_step == 0:
+                slice_step = 1
+            for idx in range(0, dim_size, slice_step):
+                axial_pred.append(torch.rot90(prediction.select(-1, idx), dims=[-2, -1]))
+                axial_target.append(torch.rot90(batch[1].select(-1, idx), dims=[-2, -1]))
 
             # coronal
             dim_size = prediction.shape[-2]
             slice_step = dim_size // self.num_slices
-            if slice_step > 0:
-                for idx in range(0, dim_size, slice_step):
-                    coronal_pred.append(torch.rot90(prediction.select(-2, idx), dims=[-2, -1]))
-                    coronal_target.append(torch.rot90(batch[1].select(-2, idx), dims=[-2, -1]))
+            if slice_step == 0:
+                slice_step = 1
+            for idx in range(0, dim_size, slice_step):
+                coronal_pred.append(torch.rot90(prediction.select(-2, idx), dims=[-2, -1]))
+                coronal_target.append(torch.rot90(batch[1].select(-2, idx), dims=[-2, -1]))
 
             if len(saggital_pred) > 0:
                 saggital_pred = torch.stack(saggital_pred, dim=1)

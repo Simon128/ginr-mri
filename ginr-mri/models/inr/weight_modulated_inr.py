@@ -15,7 +15,7 @@ class WeightModulatedINRConfig:
     use_bias: bool = True
     input_dim: int = 3
     output_dim: int = 3
-    ff_sigma: int = 1024
+    ff_sigma: int = 128
     ff_dim: int = 120
     modulated_layers: list[int] = MISSING
     backbone_spatial_feature_dimensions: list[int] = MISSING
@@ -62,7 +62,7 @@ class WeightModulatedINR(nn.Module):
         self.modulated_projection.append(nn.Identity())
 
         # deterministic_transinr
-        log_freqs = torch.linspace(0, np.log(config.ff_sigma), config.ff_dim // self.config.input_dim)
+        log_freqs = torch.linspace(0, config.ff_sigma, config.ff_dim // self.config.input_dim)
         self.ff_linear = torch.exp(log_freqs).to("cuda") # todo
         #self.ff_linear = 2 ** torch.linspace(0, config.ff_sigma, config.ff_dim // self.config.input_dim)
         #self.ff_linear = torch.randn(self.config.input_dim, config.ff_dim).to("cuda") * config.ff_sigma  # scaler
@@ -107,6 +107,7 @@ class WeightModulatedINR(nn.Module):
             else:
                 z = layer(z)
 
+        z = F.sigmoid(z)
         output = INROutput(prediction=z)
 
         if target is not None:
