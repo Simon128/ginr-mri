@@ -62,7 +62,7 @@ class WeightModulatedINR(nn.Module):
         self.modulated_projection.append(nn.Identity())
 
         # deterministic_transinr
-        log_freqs = torch.linspace(0, config.ff_sigma, config.ff_dim // self.config.input_dim)
+        log_freqs = torch.linspace(0, np.log(config.ff_sigma), config.ff_dim // self.config.input_dim)
         self.ff_linear = torch.exp(log_freqs).to("cuda") # todo
         #self.ff_linear = 2 ** torch.linspace(0, config.ff_sigma, config.ff_dim // self.config.input_dim)
         #self.ff_linear = torch.randn(self.config.input_dim, config.ff_dim).to("cuda") * config.ff_sigma  # scaler
