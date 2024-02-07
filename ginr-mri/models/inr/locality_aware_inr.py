@@ -64,30 +64,30 @@ class LocalityAwareINR(nn.Module):
         super().__init__()
         self.config = config
 
-        self.locality_fourier = FourierLinear(bandwidth=128, ff_dim=240, inr_channels=256, coord_dim=3)
+        self.locality_fourier = FourierLinear(bandwidth=128, ff_dim=240, inr_channels=2048, coord_dim=3)
         self.locality_attention = nn.MultiheadAttention(
             self.config.attentive_embedding,
             num_heads=config.attention_heads,
             batch_first=True
         )
-        self.query_proj = nn.Linear(256, 256)
-        self.key_proj = nn.Linear(256, 256)
-        self.value_proj = nn.Linear(256, 256)
-        self.inr_fourier_1 = FourierLinear(bandwidth=256, ff_dim=240, inr_channels=256, coord_dim=3)
-        self.band_1_in = nn.Linear(256, 256)
+        self.query_proj = nn.Linear(2048, 2048)
+        self.key_proj = nn.Linear(2048, 2048)
+        self.value_proj = nn.Linear(2048, 2048)
+        self.inr_fourier_1 = FourierLinear(bandwidth=256, ff_dim=240, inr_channels=2048, coord_dim=3)
+        self.band_1_in = nn.Linear(2048, 2048)
         self.band_1_out = nn.Sequential(
-            nn.Linear(256, 256),
+            nn.Linear(2048, 2048),
             nn.ReLU()
         )
-        self.inr_fourier_2 = FourierLinear(bandwidth=128, ff_dim=240, inr_channels=256, coord_dim=3)
-        self.band_2_in = nn.Linear(256, 256)
+        self.inr_fourier_2 = FourierLinear(bandwidth=128, ff_dim=240, inr_channels=2048, coord_dim=3)
+        self.band_2_in = nn.Linear(2048, 2048)
         self.band_2_out = nn.Sequential(
-            nn.Linear(256, 256),
+            nn.Linear(2048, 2048),
             nn.ReLU()
         )
 
-        self.final_band1 = nn.Linear(256, 1)
-        self.final_band2 = nn.Linear(256, 1)
+        self.final_band1 = nn.Linear(2048, 1)
+        self.final_band2 = nn.Linear(2048, 1)
 
     def compute_loss(self, preds, targets, reduction="mean"):
         assert reduction in ["mean", "sum", "none"]

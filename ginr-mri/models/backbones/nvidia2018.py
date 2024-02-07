@@ -23,14 +23,13 @@ class Nvidia2018EncoderBlock(nn.Module):
             conv_1_stride = 2
             self.downsample = nn.Sequential(
                 nn.Conv3d(in_channels=in_channels, out_channels=channels, kernel_size=1, stride=2),
-                nn.BatchNorm3d(channels)
+                nn.ReLU()
             )
         else:
             channels = in_channels 
             conv_1_stride = 1
             self.downsample = None
         self.block = nn.Sequential(OrderedDict([
-            ('batch_norm_1', nn.BatchNorm3d(in_channels)),
             ('relu_1', nn.ReLU()),
             ('conv_1', nn.Conv3d(
                 in_channels=in_channels, 
@@ -39,7 +38,6 @@ class Nvidia2018EncoderBlock(nn.Module):
                 stride=conv_1_stride,
                 padding=1 if conv_1_stride > 1 else "same")
              ),
-            ('batch_norm_2', nn.BatchNorm3d(channels)),
             ('relu_2', nn.ReLU()),
             ('conv_2', nn.Conv3d(
                 in_channels=channels, 

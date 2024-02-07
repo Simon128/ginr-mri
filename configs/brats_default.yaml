@@ -34,16 +34,16 @@ model:
         batch_norm: true
   inr:
     name: weight_modulated_inr
-    n_layer: 5
-    hidden_dim: [256, 256, 256, 256] # needs to coincide with backbone embedding channels
+    n_layer: 6
+    hidden_dim: [256, 256, 256, 256, 256] # needs to coincide with backbone embedding channels
     use_bias: true
     input_dim: 3
     output_dim: 1
-    ff_sigma: 8
+    ff_sigma: 128
     ff_dim: 120
     normalize_weights: True
-    modulated_layers: []
-    backbone_spatial_feature_dimensions: []
+    modulated_layers: [1]
+    backbone_spatial_feature_dimensions: [7680]
     modulated_layers_to_backbone_features_map:
       1: 0
   coord_sampler:
@@ -54,23 +54,23 @@ model:
 optimizer:
   type: adam
   init_lr: 0.0001
-  weight_decay: 0.0001
+  weight_decay: 0.000
   betas: [0.9, 0.999] #[0.9, 0.95]
   max_gn: null
 hooks:
   - hook: tensorboard
     priority: 100
     cfg:
-      directory: /home/simon/tum/mri-runs/debug
+      directory: /home/simon/tum/mri-runs/debug-w-3d
   - hook: lr_scheduler
     priority: 100
     cfg:
       scheduler_name: StepLR
-      step_size: 1000
+      step_size: 10000
   - hook: visualization
     priority: 1
     cfg:
-      directory: /home/simon/tum/mri-runs/debug
+      directory: /home/simon/tum/mri-runs/debug-w-3d
       frequency: 1000
       num_slices: 8
   - hook: inr_metrics

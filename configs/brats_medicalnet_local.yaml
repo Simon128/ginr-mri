@@ -19,29 +19,33 @@ data:
 model:
   name: "base"
   backbone:
-    name: "nvidia2018"
+    name: "medical_net"
     input_channels: 1
+    block: "bottleneck"
+    layers: [3, 4, 6, 3]
+    shortcut_type: "B"
+    pretrained_path: /home/simon/tum/ginr-mri/pretrained/pretrain/resnet_50.pth
   latent_transform:
     name: convolutional
     levels:
       - n_layer: 1
         strides: [1]
         padding: ["same"]
-        channels: [256]
+        channels: [2048]
         kernel_size: [1]
         backbone_idx: 4
-        input_channels: 256
+        input_channels: 2048
         batch_norm: true
   inr:
     name: locality_aware_inr
     n_layer: 5
-    hidden_dim: [256, 256, 256, 256] # needs to coincide with backbone embedding channels
+    hidden_dim: [2048, 2048, 2048, 2048] # needs to coincide with backbone embedding channels
     use_bias: true
     input_dim: 3
-    attentive_embedding: 256
+    attentive_embedding: 2048
     attention_heads: 8
     attention_on_backbone_idx: [0]
-    backbone_spatial_feature_dimensions: [384]
+    backbone_spatial_feature_dimensions: [7680]
     output_dim: 1
     ff_sigma: 128
     ff_dim: 120
