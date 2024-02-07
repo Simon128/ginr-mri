@@ -24,7 +24,7 @@ model:
     block: "bottleneck"
     layers: [3, 4, 6, 3]
     shortcut_type: "B"
-    pretrained_path: /home/simon/tum/ginr-mri/pretrained/pretrain/resnet_50.pth
+    pretrained_path:
   latent_transform:
     name: convolutional
     levels:
@@ -64,7 +64,7 @@ hooks:
   - hook: tensorboard
     priority: 100
     cfg:
-      directory: /home/simon/tum/mri-runs/debug-loc
+      directory: /home/simon/tum/mri-runs/debug-loc-2
   - hook: lr_scheduler
     priority: 100
     cfg:
@@ -73,7 +73,7 @@ hooks:
   - hook: visualization
     priority: 1
     cfg:
-      directory: /home/simon/tum/mri-runs/debug-loc
+      directory: /home/simon/tum/mri-runs/debug-loc-2
       frequency: 1000
       num_slices: 8
   - hook: inr_metrics
