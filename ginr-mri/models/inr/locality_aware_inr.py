@@ -38,6 +38,8 @@ class FourierLinear(nn.Module):
         self.ff_dim = ff_dim
         n = ff_dim // (2 * coord_dim)
         self.log_freqs = torch.linspace(1, np.log(bandwidth), n).unsqueeze(0)
+        self.log_freqs = torch.exp(self.log_freqs)
+
         self.device_set = False
 
         self.h_F = nn.Sequential(
@@ -62,7 +64,7 @@ class LocalityAwareINR(nn.Module):
         super().__init__()
         self.config = config
 
-        self.locality_fourier = FourierLinear(bandwidth=128, ff_dim=240, inr_channels=256, coord_dim=2)
+        self.locality_fourier = FourierLinear(bandwidth=128, ff_dim=240, inr_channels=256, coord_dim=3)
         self.locality_attention = nn.MultiheadAttention(
             self.config.attentive_embedding,
             num_heads=config.attention_heads,
@@ -71,13 +73,13 @@ class LocalityAwareINR(nn.Module):
         self.query_proj = nn.Linear(256, 256)
         self.key_proj = nn.Linear(256, 256)
         self.value_proj = nn.Linear(256, 256)
-        self.inr_fourier_1 = FourierLinear(bandwidth=256, ff_dim=240, inr_channels=256, coord_dim=2)
+        self.inr_fourier_1 = FourierLinear(bandwidth=256, ff_dim=240, inr_channels=256, coord_dim=3)
         self.band_1_in = nn.Linear(256, 256)
         self.band_1_out = nn.Sequential(
             nn.Linear(256, 256),
             nn.ReLU()
         )
-        self.inr_fourier_2 = FourierLinear(bandwidth=128, ff_dim=240, inr_channels=256, coord_dim=2)
+        self.inr_fourier_2 = FourierLinear(bandwidth=128, ff_dim=240, inr_channels=256, coord_dim=3)
         self.band_2_in = nn.Linear(256, 256)
         self.band_2_out = nn.Sequential(
             nn.Linear(256, 256),
